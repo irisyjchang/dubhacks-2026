@@ -1,0 +1,14 @@
+.venv/
+.video-venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+!.env.example
+models/
+videos/
+outputs/
+*.log
+.pytest_cache/
+.coverage
