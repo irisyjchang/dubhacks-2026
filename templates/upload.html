@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spin analysis test</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 850px; margin: 24px auto; padding: 0 16px; }
+label { display: block; margin: 16px 0; }
+button, input, select { font: inherit; }
+video { display: block; max-width: 100%; max-height: 70vh; margin: 16px 0; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; }
+#status { white-space: pre-wrap; }
+</style>
+<h1>Spin analysis test</h1>
+<p>Upload a short skating clip. Get the annotated video and full coaching report.</p>
+<form id="upload-form">
+  <label>Video (up to 30 seconds / 200 MB)
+    <input name="video" type="file" accept="video/*,.mov,.m4v,.avi" required>
+  </label>
+  <label>Processing
+    <select name="mode" id="mode">
+      <option value="nvidia">Pose tracking + NVIDIA coaching report + timed video advice</option>
+      <option value="local">Local-only test: pose video + rule-based report</option>
+    </select>
+  </label>
+  {% if key_configured %}
+  <p>NVIDIA key configured on this server.</p>
+  {% else %}
+  <label id="key-label">NVIDIA API key
+    <input name="api_key" id="api-key" type="password" autocomplete="off" spellcheck="false">
+    <small>Used for this upload; not saved to disk.</small>
+  </label>
+  {% endif %}
+  <p id="mode-note">Pose processing runs locally. Timestamped video crops and measurements are sent to NVIDIA for coaching.</p>
+  <button id="submit" type="submit">Upload and analyze</button>
+</form>
+<p id="status" role="status" aria-live="polite"></p>
+<section id="results" hidden>
+  <h2>Feedback video</h2>
+  <video id="video" controls playsinline preload="metadata"></video>
+  <p><a id="download-video">Download video</a> · <a id="download-report">Download full report</a> · <a id="download-data">Analysis JSON</a></p>
+  <p id="provenance"></p>
+  <p id="warning"></p>
+  <h2>Full coaching report</h2>
+  <pre id="report"></pre>
+</section>
+<script src="/static/upload.js" defer></script>
+</html>

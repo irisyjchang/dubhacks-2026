@@ -1,0 +1,8 @@
+# Tested on this Mac with Python 3.9; MediaPipe publishes platform-specific wheels.
+mediapipe==1.1.1
+opencv-python==4.13.0.92
+numpy==2.0.2
+imageio-ffmpeg==0.6.0
+matplotlib>=3.9,<4
+requests>=2.32,<3
+Flask>=3.1,<4
