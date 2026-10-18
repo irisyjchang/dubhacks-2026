@@ -1,0 +1,143 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Skate viewer</title>
+<style>
+body{margin:0;font:13px system-ui,sans-serif;background:#15171a;color:#ddd;display:flex;height:100vh}
+#main{flex:1;display:flex;flex-direction:column;padding:8px;min-width:0}
+#stage{position:relative;flex:1;min-height:0;display:flex;justify-content:center;align-items:center;background:#000}
+#wrap{position:relative}
+video,canvas#ov{display:block;max-width:100%}
+canvas#ov{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+#ctl{display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap}
+button,select{background:#2a2d33;color:#ddd;border:1px solid #444;padding:3px 9px;border-radius:4px;cursor:pointer}
+#tl{width:100%;height:150px;display:block;background:#1d2024;cursor:pointer}
+#side{width:300px;overflow:auto;padding:8px;background:#1b1d21;border-left:1px solid #333}
+.el{padding:6px;margin-bottom:6px;border-radius:4px;background:#25282e;cursor:pointer;border-left:5px solid}
+.el:hover{background:#2f333a}.el b{color:#fff}
+#tes{font-size:16px;margin-bottom:8px}
+</style></head><body>
+<div id="main">
+ <div id="stage"><div id="wrap"><video id="v" src="video.mp4" muted playsinline preload="auto"></video><canvas id="ov"></canvas></div></div>
+ <div id="ctl">
+  <button id="pp">Play</button><button id="prev">&larr;</button><button id="next">&rarr;</button>
+  <select id="spd"><option value=".25">0.25x</option><option value=".5">0.5x</option><option value="1" selected>1x</option></select>
+  <label><input type="checkbox" id="tog" checked> skeleton</label>
+  <label><input type="checkbox" id="blk"> skeleton only (black)</label>
+  <label title="Only show moves the model is at least this confident about">min confidence
+   <input type="range" id="thr" min="0.10" max="0.90" step="0.01" value="0.30">
+   <input type="number" id="thrv" min="0.10" max="0.90" step="0.01" value="0.30" style="width:4.5em"></label>
+  <span id="info"></span>
+ </div>
+ <canvas id="tl"></canvas>
+</div>
+<div id="side"><div id="tes"></div><div id="els"></div></div>
+<script>
+const D=/*__DATA__*/null;
+const FPS=D.fps,T=D.skeleton.length;
+const EDGES=[[0,1],[0,2],[1,3],[2,4],[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+const v=document.getElementById('v'),ov=document.getElementById('ov'),tl=document.getElementById('tl');
+const octx=ov.getContext('2d'),tctx=tl.getContext('2d');
+const KC={jump:'#e8a33d',spin:'#4fb3d9',step:'#7bc96f',transition:'#b48ad6'};
+const CC=['#666','#e8a33d','#4fb3d9','#7bc96f','#b48ad6'];
+const side=i=>i%2?'#ff8c3c':'#3cb4ff'; // odd = right (COCO), even = left
+const dur=()=>v.duration||T/FPS;
+const frame=()=>Math.max(0,Math.min(T-1,Math.round(v.currentTime*FPS)));
+const fmt=s=>s.toFixed(2)+'s';
+const JN={A:'Axel',Lz:'Lutz',F:'Flip',Lo:'Loop',S:'Salchow',T:'Toe loop',Eu:'Euler'};
+const NUM=['','Single','Double','Triple','Quad'];
+const SP={USp:'Upright spin',LSp:'Layback spin',CSp:'Camel spin',SSp:'Sit spin',CoSp:'Combination spin'};
+function moveName(code){
+  if(code.startsWith('StSq'))return 'Step sequence';
+  if(code.startsWith('ChSq'))return 'Choreo sequence';
+  const sp=code.match(/^(F?)(C?)(USp|LSp|CSp|SSp|CoSp)(\d|B)?/);
+  if(sp){const n=(sp[1]?'flying ':'')+(sp[2]?'change-foot ':'')+SP[sp[3]].toLowerCase()+(sp[4]?' (level '+sp[4]+')':'');
+    return n[0].toUpperCase()+n.slice(1);}
+  const parts=code.split('+').map(j=>{const m=j.match(/^(\d)(A|Lz|Lo|F|S|T|Eu)/);return m?NUM[+m[1]]+' '+JN[m[2]]:j;});
+  return parts.join(' + ')+(parts.length>1?' combo':'');
+}
+// predict runs at a low threshold; elements are picked best-first, so filtering here
+// is identical to rerunning the model with a higher threshold
+let els=[];
+function render(){
+  const thr=+document.getElementById('thr').value;
+  els=D.elements.filter(e=>e.det_score>=thr);
+  const tes=els.reduce((a,e)=>a+e.bv+e.goe,0);
+  document.getElementById('tes').innerHTML=`<span title="Technical Element Score: sum of base value + GOE (grade of execution) for each move">TES <b>${tes.toFixed(2)}</b></span> &middot; ${D.name}`
+    +(els.length?'':`<br><span style="color:#888">no moves at confidence &ge; ${thr.toFixed(2)}</span>`);
+  document.getElementById('els').innerHTML=els.map((e,i)=>`<div class="el" data-i="${i}" style="border-color:${KC[e.kind]||'#888'}"><b>${moveName(e.code)}</b> (${e.kind})<br>${fmt(e.start_s)}&ndash;${fmt(e.end_s)}<br>base ${e.bv.toFixed(2)} &middot; GOE ${e.goe>=0?'+':''}${e.goe.toFixed(2)} &middot; confidence ${e.det_score.toFixed(2)}${e.fall?' &middot; FALL':''}</div>`).join('');
+  document.querySelectorAll('.el').forEach(d=>d.onclick=()=>{const e=els[+d.dataset.i];v.currentTime=e.start_s;});
+}
+const thrS=document.getElementById('thr'),thrN=document.getElementById('thrv');
+thrS.oninput=()=>{thrN.value=(+thrS.value).toFixed(2);render();};
+thrN.oninput=()=>{const x=parseFloat(thrN.value);if(isNaN(x))return;
+  thrS.value=Math.min(0.9,Math.max(0.1,x));render();};
+thrN.onchange=()=>{thrN.value=(+thrS.value).toFixed(2);};  // snap typed value into range on blur/enter
+thrN.onkeydown=e=>e.stopPropagation();  // typing digits/arrows must not trigger play / frame-step keys
+render();
+function drawLabel(){
+  const e=els.find(e=>v.currentTime>=e.start_s&&v.currentTime<=e.end_s);if(!e)return;
+  const H=D.height,fs=Math.round(H/16),pad=fs*0.4;
+  const t1=moveName(e.code),t2='confidence '+e.det_score.toFixed(2)+' · '+(e.bv+e.goe).toFixed(2)+' pts';
+  octx.font=`bold ${fs}px sans-serif`;const w1=octx.measureText(t1).width;
+  octx.font=`${fs*0.55}px sans-serif`;const w=Math.max(w1,octx.measureText(t2).width)+2*pad;
+  octx.globalAlpha=0.75;octx.fillStyle='#000';octx.fillRect(pad,pad,w,fs*1.75+pad);octx.globalAlpha=1;
+  octx.fillStyle=KC[e.kind]||'#fff';octx.font=`bold ${fs}px sans-serif`;octx.textBaseline='top';octx.fillText(t1,2*pad,pad*1.5);
+  octx.fillStyle='#ddd';octx.font=`${fs*0.55}px sans-serif`;octx.fillText(t2,2*pad,pad*1.5+fs*1.1);
+}
+function drawSkel(){
+  const W=D.width,H=D.height;
+  if(ov.width!==W){ov.width=W;ov.height=H;}
+  const black=document.getElementById('blk').checked;
+  v.style.visibility=black?'hidden':'visible';
+  ov.style.background=black?'#000':'transparent';
+  octx.clearRect(0,0,W,H);
+  drawLabel();
+  if(!document.getElementById('tog').checked&&!black)return;
+  const k=D.skeleton[frame()];if(!k)return;
+  const lw=Math.max(2,H/300),r=Math.max(3,H/200);
+  for(const [a,b] of EDGES){const A=k[a],B=k[b];if(A[2]<0.1||B[2]<0.1)continue;
+    octx.globalAlpha=Math.min(1,Math.min(A[2],B[2])+0.2);octx.strokeStyle=side(b);octx.lineWidth=lw;
+    octx.beginPath();octx.moveTo(A[0],A[1]);octx.lineTo(B[0],B[1]);octx.stroke();}
+  for(let i=0;i<17;i++){const p=k[i];if(p[2]<0.1)continue;
+    octx.globalAlpha=Math.min(1,0.3+p[2]);
+    octx.fillStyle=`hsl(${Math.round(p[2]*120)},90%,55%)`; // red low -> green high
+    octx.beginPath();octx.arc(p[0],p[1],r,0,7);octx.fill();}
+  octx.globalAlpha=1;
+}
+function drawTL(){
+  const dpr=devicePixelRatio||1,w=tl.clientWidth,h=tl.clientHeight;
+  if(tl.width!==w*dpr){tl.width=w*dpr;tl.height=h*dpr;}
+  const c=tctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+  const d=dur(),X=t=>t/d*w,barH=40,py=barH+6,ph=h-py-2;
+  // probs stacked (skip class 0)
+  const P=D.frame_probs,n=P.length;
+  for(let cl=4;cl>=1;cl--){c.fillStyle=CC[cl]+'aa';c.beginPath();c.moveTo(0,py+ph);
+    for(let i=0;i<n;i++){let s=0;for(let q=1;q<=cl;q++)s+=P[i][q];c.lineTo(X(i/FPS),py+ph*(1-Math.min(1,s)));}
+    c.lineTo(X((n-1)/FPS),py+ph);c.closePath();c.fill();}
+  c.strokeStyle='#444';c.strokeRect(0.5,py+0.5,w-1,ph);
+  // element bars
+  c.font='11px system-ui';c.textBaseline='top';
+  els.forEach(e=>{const x0=X(e.start_s),x1=X(e.end_s);c.fillStyle=KC[e.kind]||'#888';c.fillRect(x0,0,Math.max(1,x1-x0),barH);
+    c.strokeStyle='#000';c.strokeRect(x0+.5,.5,Math.max(1,x1-x0)-1,barH-1);
+    c.save();c.beginPath();c.rect(x0,0,x1-x0,barH);c.clip();c.fillStyle='#000';
+    c.fillText(moveName(e.code),x0+3,3);c.fillText(e.det_score.toFixed(2)+' '+e.start_s.toFixed(1)+'-'+e.end_s.toFixed(1),x0+3,17);c.restore();});
+  const x=X(v.currentTime);c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke();c.lineWidth=1;
+}
+function update(){drawSkel();drawTL();
+  document.getElementById('info').textContent='frame '+frame()+'/'+T+'  t='+v.currentTime.toFixed(2)+'s';
+  const cur=els.findIndex(e=>v.currentTime>=e.start_s&&v.currentTime<=e.end_s);
+  document.querySelectorAll('.el').forEach((d,i)=>d.style.outline=i===cur?'1px solid #fff':'none');}
+function loop(){update();requestAnimationFrame(loop);}
+
+tl.addEventListener('click',ev=>{const rect=tl.getBoundingClientRect();v.currentTime=(ev.clientX-rect.left)/rect.width*dur();});
+const pp=document.getElementById('pp');
+const toggle=()=>v.paused?v.play():v.pause();
+pp.onclick=toggle;v.onplay=()=>pp.textContent='Pause';v.onpause=()=>pp.textContent='Play';
+const step=n=>{v.pause();v.currentTime=Math.max(0,(frame()+n)/FPS+0.001);};
+document.getElementById('prev').onclick=()=>step(-1);document.getElementById('next').onclick=()=>step(1);
+document.getElementById('spd').onchange=e=>v.playbackRate=+e.target.value;
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){step(-1);e.preventDefault();}else if(e.key==='ArrowRight'){step(1);e.preventDefault();}else if(e.key===' '){toggle();e.preventDefault();}});
+// size wrapper to video aspect, fit stage
+function fit(){const s=document.getElementById('stage'),r=D.width/D.height;let w=s.clientWidth,h=w/r;if(h>s.clientHeight){h=s.clientHeight;w=h*r;}
+  const wr=document.getElementById('wrap');wr.style.width=w+'px';wr.style.height=h+'px';v.style.width=w+'px';v.style.height=h+'px';}
+addEventListener('resize',fit);fit();loop();
+</script></body></html>

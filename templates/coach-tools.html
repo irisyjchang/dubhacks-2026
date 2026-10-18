@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spin analysis test</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 850px; margin: 24px auto; padding: 0 16px; }
+label { display: block; margin: 16px 0; }
+button, input, select { font: inherit; }
+video { display: block; max-width: 100%; max-height: 70vh; margin: 16px 0; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; }
+#status { white-space: pre-wrap; }
+.timeline { list-style: none; padding: 0 0 0 20px; border-left: 2px solid #d9e5df; }
+.timeline li { position: relative; padding: 0 0 28px 16px; }
+.timeline li::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #15805d; position: absolute; left: -26px; top: 7px; }
+.timeline h3 { margin: 4px 0 8px; overflow-wrap: anywhere; }
+.timeline time, .timeline .provenance { color: #53635b; font-size: .9rem; }
+.timeline details { border: 1px solid #d9e5df; border-radius: 10px; padding: 12px; margin-top: 12px; }
+.timeline summary { cursor: pointer; font-weight: 600; }
+.timeline pre { max-height: 32rem; overflow: auto; }
+#feedback-history { margin: 40px 0; border-top: 1px solid #d9e5df; padding-top: 20px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.text-coach { background: #eef7f2; border: 1px solid #b9d6c6; border-radius: 16px; padding: 20px; margin: 24px 0; }
+.text-coach h2 { margin-top: 0; }
+.text-coach code { background: #fff; border-radius: 4px; padding: 2px 5px; }
+.text-coach a { color: #126449; font-weight: 600; }
+.group-messages { max-height: 420px; overflow-y: auto; padding: 0; list-style: none; }
+.group-messages li { background: white; border-radius: 10px; margin: 10px 0; padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.group-messages .ai { border-left: 4px solid #15805d; }
+#group-text { width: 100%; box-sizing: border-box; font: inherit; padding: 10px; }
+</style>
+<h1>Spin analysis test</h1>
+<p>Upload a short skating clip. Get the annotated video and full coaching report.</p>
+<form id="upload-form">
+  <label>Video (up to 30 seconds / 200 MB)
+    <input name="video" type="file" accept="video/*,.mov,.m4v,.avi" required>
+  </label>
+  <label>Processing
+    <select name="mode" id="mode">
+      <option value="nvidia">Pose tracking + NVIDIA coaching report + timed video advice</option>
+      <option value="local">Local-only test: pose video + rule-based report</option>
+    </select>
+  </label>
+  {% if key_configured %}
+  <p>NVIDIA key configured on this server.</p>
+  {% else %}
+  <label id="key-label">NVIDIA API key
+    <input name="api_key" id="api-key" type="password" autocomplete="off" spellcheck="false">
+    <small>Used for this upload; not saved to disk.</small>
+  </label>
+  {% endif %}
+  <p id="mode-note">Pose processing runs locally. Timestamped video crops and measurements are sent to NVIDIA for coaching.</p>
+  <button id="submit" type="submit">Upload and analyze</button>
+</form>
+<p id="status" role="status" aria-live="polite"></p>
+<section class="text-coach" aria-labelledby="text-coach-heading">
+  <div class="section-heading"><h2 id="text-coach-heading">Your coach, between sessions</h2><button id="refresh-coach" type="button">Refresh</button></div>
+  <p id="text-coach-status" role="status">Connecting to your text coach…</p>
+  <p><a id="text-coach-link" hidden>Text your coach</a></p>
+  <p>Set a focus, get a practice plan, and come back after practice. Your coach remembers your feedback and your goals.</p>
+  <p id="text-coach-goal">No practice goal saved yet.</p>
+  <p><code>GOAL consistent arm reach</code> saves your focus. <code>PLAN</code> builds your next session. <code>DONE five slow entries</code> logs practice. <code>PROGRESS</code> compares your last two videos.</p>
+  <p><code>COACH</code> followed by a note saves advice from your human coach. <code>SHARE</code> prepares a summary you can show them.</p>
+  <p id="text-coach-notifications">Text START for a message when new feedback is ready. STOP pauses texts.</p>
+  <ul id="text-coach-notes"></ul>
+</section>
+<section class="text-coach" aria-labelledby="group-heading">
+  <div class="section-heading"><h2 id="group-heading">Skating group + AI</h2><button id="new-group" type="button">New preview</button></div>
+  <p id="group-line-status" role="status">Checking group delivery…</p>
+  <p>Local preview: try both human roles here. Messages stay in this app and are saved with your feedback history; this preview does not text either phone.</p>
+  <p>Say <code>AI, what should we focus on?</code> to invite the AI. Humans can talk freely between replies. Everyone in the group can ask questions or suggest changes. <code>MUTE AI</code> and <code>UNMUTE AI</code> control participation.</p>
+  <label>Saved conversation <select id="group-room"><option value="">Choose or create a preview</option></select></label>
+  <p id="group-status" role="status" aria-live="polite"></p>
+  <ol id="group-messages" class="group-messages" aria-label="Group conversation"></ol>
+  <form id="group-form">
+    <label>Speaking as <select id="group-role"><option value="member-1">Participant 1</option><option value="member-2">Participant 2</option></select></label>
+    <label>Message <textarea id="group-text" rows="3" maxlength="3000" required placeholder="AI, what does my latest video show?"></textarea></label>
+    <button id="group-send" type="submit" disabled>Send in preview</button>
+  </form>
+</section>
+<section id="results" hidden>
+  <h2>Feedback video</h2>
+  <video id="video" controls playsinline preload="metadata"></video>
+  <p><a id="download-video">Download video</a> · <a id="download-report">Download full report</a> · <a id="download-data">Analysis JSON</a></p>
+  <p id="provenance"></p>
+  <p id="warning"></p>
+  <p id="coach-sync" role="status"></p>
+  <button id="retry-coach" type="button" hidden>Share report with text coach</button>
+  <h2>Full coaching report</h2>
+  <pre id="report"></pre>
+</section>
+<section id="feedback-history" aria-labelledby="history-heading">
+  <div class="section-heading"><h2 id="history-heading">Your feedback timeline</h2><button id="refresh-history" type="button">Refresh</button></div>
+  <p>Revisit feedback from your past skating attempts, newest first.</p>
+  <p id="history-status" role="status" aria-live="polite"></p>
+  <ol id="feedback-timeline" class="timeline"></ol>
+  <button id="more-history" type="button" hidden>Load earlier feedback</button>
+</section>
+<script src="/static/coach-tools.js" defer></script>
+<script src="/static/group-preview.js" defer></script>
+</html>

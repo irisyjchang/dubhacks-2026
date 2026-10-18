@@ -1,0 +1,31 @@
+# Apple Silicon (MPS) / laptop config: ~3M params, smaller windows and batch.
+_base_: base.yaml
+model:
+  gcn_channels: [48, 48, 96, 96, 192, 192]
+  d_model: 192
+  tf_layers: 4
+  tf_heads: 6
+  tf_ffn: 768
+  attn_radius: 128
+data:
+  window: 384
+  stride: 192
+  num_workers: 4
+  gpu_preload: false
+train:
+  device: auto                 # cuda > mps > cpu
+  batch_size: 8
+  compile: false
+  log_every: 20
+  ckpt_every: 200
+  eval_every: 1000
+  stages:
+    - {name: clean, steps: 4000, noise: false, lr: 1.0e-3, warmup: 200}
+    - {name: noisy, steps: 1500, noise: true, lr: 3.0e-4, warmup: 100, select_metric: noisy/tes/mae}
+infer:
+  window: 384
+  stride: 288
+eval:
+  max_programs: 20
+output:
+  dir: runs/mac_small

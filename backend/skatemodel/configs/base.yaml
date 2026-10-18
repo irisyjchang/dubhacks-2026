@@ -1,0 +1,86 @@
+# Full FineFS training config (2 GPUs via torchrun; also runs on 1 GPU / CPU).
+seed: 0
+
+data:
+  root: data/finefs            # contains skeleton/ and annotation/ (see skatemodel/data/finefs_io.py)
+  fps: 25
+  splits_file: splits.json     # created on first run (70/15/15, grouped by skater, stratified); reused afterwards
+  split_ratios: [0.70, 0.15, 0.15]
+  window: 640                  # ~25.6 s
+  stride: 320                  # 50% overlap between training windows (+ random start jitter)
+  num_workers: 6
+
+model:
+  gcn_channels: [64, 64, 128, 128, 256, 256]   # 6 ST-GCN blocks
+  temporal_kernel: 9
+  d_model: 256
+  tf_layers: 6
+  tf_heads: 8
+  tf_ffn: 1024
+  attn_radius: 128             # local attention +/-128 frames
+  dropout: 0.1
+
+aug:
+  # geometric (both stages)
+  random_yaw: true
+  scale_range: [0.9, 1.1]
+  mirror_prob: 0.0             # mirroring flips rotation direction; keep 0 unless you want CW/CCW invariance
+  # MediaPipe-style noise (noisy stage only)
+  jitter_std: 0.015            # fraction of ~body size
+  depth_std: 0.05
+  dropout_prob: 0.3            # expected joint-dropout events per 100 frames
+  dropout_max_len: 25
+  swap_prob: 0.2               # expected L/R swap bursts per 100 frames
+  swap_max_len: 15
+  resample: true
+  resample_range: [0.85, 1.15]
+
+loss:
+  focal_gamma: 2.0
+  class_alpha: [0.5, 2.0, 1.0, 1.0, 0.5]   # none, jump, spin, step, transition
+  focal: 1.0
+  iou: 1.0
+  l1: 0.5
+  kind: 0.5
+  jtype: 1.0
+  rot: 1.0
+  ur: 0.5
+  comb: 0.5
+  fall: 1.0
+  goe: 1.0
+
+train:
+  batch_size: 8                # per GPU
+  weight_decay: 0.05
+  grad_clip: 1.0
+  min_lr_ratio: 0.02
+  amp: bf16                    # used only on GPUs that support bf16
+  sync_bn: true
+  log_every: 50
+  ckpt_every: 500
+  eval_every: 2000
+  stages:                      # two-stage: clean, then MediaPipe-noise fine-tune
+    - {name: clean, steps: 30000, noise: false, lr: 5.0e-4, warmup: 1000}
+    - {name: noisy, steps: 10000, noise: true, lr: 2.0e-4, warmup: 300}
+
+infer:
+  window: 640
+  stride: 480
+  batch_size: 8
+  pre_thr: 0.1
+  nms_iou: 0.5
+  final_thr: 0.3
+  cross_nms_iou: 0.3
+
+eval:
+  noisy: true                  # also report metrics under MediaPipe-style noise (prefix noisy/)
+  max_programs: null           # limit val programs for faster periodic eval
+  select_metric: tes/mae       # best.pt selection
+  select_mode: min
+  test_at_end: true
+
+logging:
+  tensorboard: true
+
+output:
+  dir: runs/finefs_base

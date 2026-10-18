@@ -1,0 +1,17 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.dmg
+anyalsis_model/
+
+# datasets / caches (too large for git; see README for how to get them)
+data/
+skatemodel/data/mmfs_cache/
+skatemodel/data/mmfs_cache_small/
+
+# training checkpoints: only the shipped final model is tracked
+skatemodel/runs/**/*.pt
+!skatemodel/runs/thunder_l40/final_model.pt

@@ -1,0 +1,12 @@
+# Local runtime, credentials, model downloads and generated media
+.venv/
+.video-venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.*
+/models/
+/videos/
+/outputs/
+/tools/

@@ -1,0 +1,24 @@
+# Local CPU smoke test on synthetic data (full-size model, tiny schedule).
+_base_: base.yaml
+data:
+  root: data/synthetic
+  splits_file: runs/smoke_cpu/splits.json
+  window: 256
+  stride: 128
+  num_workers: 0
+train:
+  device: cpu
+  batch_size: 2
+  log_every: 2
+  ckpt_every: 4
+  eval_every: 6
+  stages:
+    - {name: clean, steps: 6, noise: false, lr: 5.0e-4, warmup: 2}
+    - {name: noisy, steps: 4, noise: true, lr: 2.0e-4, warmup: 1}
+infer:
+  window: 256
+  stride: 192
+eval:
+  max_programs: 3
+output:
+  dir: runs/smoke_cpu

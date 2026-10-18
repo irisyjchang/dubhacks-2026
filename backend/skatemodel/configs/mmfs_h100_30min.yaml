@@ -1,0 +1,47 @@
+# MMFS (2D COCO keypoints, real programs with exact element boundaries) on ONE H100, ~25 min total.
+# Run via thunder/train_h100.sh: stage clean (--max-minutes 13) then noisy (--max-minutes 5),
+# each with bf16 + torch.compile + data preloaded on the GPU. Steps are upper bounds; the
+# wall-clock budget is normally what ends a stage (the LR cosine follows wall-clock progress).
+_base_: base.yaml
+data:
+  format: mmfs
+  root: data/mmfs_cache        # built by scripts/build_mmfs_cache.py (contains splits.json)
+  splits_file: null            # -> <root>/splits.json (program-level; official test clips -> test)
+  fps: 30
+  window: 640                  # ~21 s at 30 fps
+  stride: 320
+  num_workers: 8
+  prefetch_factor: 4
+  gpu_preload: true
+model:
+  n_elem_classes: 63           # MMFS-63 class head (gives spin/step levels for base values)
+aug:
+  two_d: true
+  random_yaw: false            # yaw rotation is meaningless for 2D image keypoints
+  mirror_prob: 0.5             # horizontal flip + L/R swap
+  scale_range: [0.85, 1.15]
+  depth_std: 0.03
+loss:
+  ur: 0.0                      # MMFS has no under-rotation / fall labels (masked anyway)
+  eclass: 1.0
+train:
+  device: cuda
+  batch_size: 32
+  amp: bf16
+  compile: true
+  sync_bn: false
+  log_every: 50
+  ckpt_every: 500
+  eval_every: 1500
+  stages:
+    - {name: clean, steps: 12000, noise: false, lr: 1.0e-3, warmup: 400}
+    - {name: noisy, steps: 5000, noise: true, lr: 3.0e-4, warmup: 100}
+infer:
+  batch_size: 64
+eval:
+  noisy: final                 # noisy-input metrics only at the end of a stage (saves time)
+  max_programs: null
+  select_metric: seg/mAP_avg   # TES only evaluable on the 82 programs with complete element lists
+  select_mode: max
+output:
+  dir: runs/mmfs_h100

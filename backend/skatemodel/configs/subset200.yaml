@@ -1,0 +1,13 @@
+# Free local debugging on 200 real FineFS programs (140/30/30 drawn from the saved split).
+_base_: mac_small.yaml
+data:
+  subset: 200
+train:
+  eval_every: 500
+  stages:
+    - {name: clean, steps: 1500, noise: false, lr: 1.0e-3, warmup: 100}
+    - {name: noisy, steps: 500, noise: true, lr: 3.0e-4, warmup: 50, select_metric: noisy/tes/mae}
+eval:
+  max_programs: 30
+output:
+  dir: runs/subset200

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skating analysis test</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 850px; margin: 24px auto; padding: 0 16px; }
+label { display: block; margin: 16px 0; }
+button, input, select { font: inherit; }
+video { display: block; max-width: 100%; max-height: 70vh; margin: 16px 0; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; }
+#status { white-space: pre-wrap; }
+</style>
+<h1>Skating analysis test</h1>
+<p>Upload a clip, confirm the element, then get a quick takeaway and detailed feedback.</p>
+<form id="upload-form">
+  <label>Video (up to 30 seconds / 200 MB)
+    <input name="video" type="file" accept="video/*,.mov,.m4v,.avi" required>
+  </label>
+  <label>Intended element
+    <select name="element" id="element">
+      <option value="auto">Suggest an element, then let me confirm</option>
+      {% for key, item in elements.items() %}<option value="{{key}}">{{item.label}}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Processing
+    <select name="mode" id="mode">
+      <option value="nvidia">Pose tracking + AI coaching report + timed video advice</option>
+      <option value="local">Local-only test: pose video + rule-based report</option>
+    </select>
+  </label>
+  {% if key_configured %}
+  <p>NVIDIA key configured on this server.</p>
+  {% else %}
+  <label id="key-label">NVIDIA API key
+    <input name="api_key" id="api-key" type="password" autocomplete="off" spellcheck="false">
+    <small>Used for this upload; not saved to disk.</small>
+  </label>
+  {% endif %}
+  {% if gemini_configured %}<p>Gemini is the primary coaching provider; NVIDIA is the fallback.</p>{% endif %}
+  <label><input type="checkbox" id="perceptron-track" name="perceptron_track" {% if perceptron_configured %}checked{% endif %}>
+    Perceptron whole-person bounding box + MediaPipe body points
+  </label>
+  {% if perceptron_configured %}
+  <p>Perceptron key configured on this server.</p>
+  {% else %}
+  <label id="perceptron-key-label">Perceptron API key (optional)
+    <input name="perceptron_key" id="perceptron-key" type="password" autocomplete="off" spellcheck="false">
+    <small>Used for this upload; not saved to disk.</small>
+  </label>
+  {% endif %}
+  <p id="tracking-note">When enabled, the video is also sent to Perceptron for person boxes. Nearby boxes are interpolated and refined with body points; long gaps use a labelled local pose box.</p>
+  <p id="mode-note" data-gemini="{{'true' if gemini_configured else 'false'}}">Pose processing runs locally. A compact video and timestamped body crops are sent to {% if gemini_configured %}Gemini first, with NVIDIA as fallback{% else %}NVIDIA{% endif %} to identify the move before confirmation, then with measurements for coaching.</p>
+  <button id="submit" type="submit">Upload and inspect</button>
+</form>
+<p id="status" role="status" aria-live="polite"></p>
+<button id="retry-report" type="button" hidden>Retry report using saved tracking</button>
+<section id="confirmation" hidden>
+  <h2>Confirm the movement</h2>
+  <p id="suggestion"></p>
+  <video id="preview" controls playsinline preload="metadata"></video>
+  <form id="confirm-form">
+    <label>What were you attempting?
+      <select id="confirmed-element">
+        {% for key, item in elements.items() %}<option value="{{key}}" data-family="{{item.family}}">{{item.label}}</option>{% endfor %}
+      </select>
+    </label>
+    <p id="phase-help"></p>
+    <div id="phase-markers" hidden>
+      <label><span id="first-marker-label"></span> <input id="first-marker" type="number" min="0" step="0.01"></label>
+      <label><span id="second-marker-label"></span> <input id="second-marker" type="number" min="0" step="0.01"></label>
+    </div>
+    <p>Feedback assesses visible strengths and improvements using ISU 2026–27 criteria. This test provides coaching opinions, not official scores.</p>
+    <button id="confirm-button" type="submit">Confirm and generate feedback</button>
+  </form>
+</section>
+<section id="results" hidden>
+  <h2>Quick feedback</h2>
+  <p id="confirmed-label"></p>
+  <p id="quick-feedback"></p>
+  <h2>Feedback video</h2>
+  <video id="video" controls playsinline preload="metadata"></video>
+  <p><a id="download-video">Download video</a> · <a id="download-report">Download full report</a> · <a id="download-data">Analysis JSON</a></p>
+  <p id="tracking-result"></p>
+  <p><a id="download-tracking" hidden>Download timestamped person boxes</a></p>
+  <p id="provenance"></p>
+  <p id="warning"></p>
+  <details id="isu-section" hidden><summary>ISU rule checks and sources</summary>
+    <p id="isu-policy"></p>
+    <ul id="isu-checks"></ul>
+  </details>
+  <details><summary>Coaching report and score</summary>
+    <pre id="report"></pre>
+  </details>
+</section>
+<script src="/static/upload.js" defer></script>
+</html>

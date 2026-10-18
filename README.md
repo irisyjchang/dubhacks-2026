@@ -1,6 +1,20 @@
 # DubHacks 2026: figure-skating spin coach
 
+The additional backend repository is imported under [backend/](backend/README.md).
+See [import details](backend/IMPORT.md) for its source revision and setup.
+
+iMessage uploads can use the hosted API by setting `MESSAGING_AGENT_API_URL`
+and running `npm run photon`; see [API setup](scripts/MESSAGING-API.md).
+Send a clip, then reply with a move number to receive its breakdown and videos.
+
+Without that URL, iMessage video uploads use the imported coaching backend: run
+`npm run imessage-video-server` and `npm run photon` together. Send a short clip
+to receive the annotated MOV, then ask follow-up questions about its saved report.
+
 A local prototype that tracks the main skater, measures joint geometry, and produces an annotated video plus a written coaching report. A minimal upload page exercises the same pipeline without a production frontend.
+
+The upload page on `main` is preserved. Text-coach tools, the group preview,
+and feedback history are available at **http://127.0.0.1:8000/coaching-tools**.
 
 ## Setup
 
@@ -30,6 +44,29 @@ Upload a MOV, MP4, M4V, WebM or AVI clip up to 30 seconds / 200 MB. The page sho
 - **Local-only mode:** local tracking, a pose-overlay video, and a disclosed rule-based report; no model calls or model timeline captions.
 
 This is a localhost development harness: one processing worker, an in-memory job queue, and artifacts saved under `outputs/web_jobs/<job-id>/`. Job records reset when the server restarts, while files remain on disk. It has no accounts, durable queue, storage service or automatic retention. It is not a public deployment.
+
+### Ask about the feedback through Photon
+
+Run `npm run photon` with `PHOTON_CONNECTION=spectrum`, the owning account’s
+`SPECTRUM_PROJECT_ID` and `SPECTRUM_PROJECT_SECRET`, and the OpenAI/MongoDB credentials in `.env`
+before uploading. Completed reports are shared with the local coach service and
+stored in MongoDB. The configured phone number can then text the assigned
+Photon line and ask questions about that feedback. The AI receives the
+report, timestamped findings, provenance, and recent conversation; it does not
+receive the video. If sharing fails, the upload page offers a retry button;
+the completed analysis is preserved. See [coach setup](scripts/COACH.md).
+
+The **Skating group + AI** section at http://127.0.0.1:8000/coaching-tools previews a group
+conversation using the saved video feedback. Humans lead; the AI joins when
+addressed with `AI,`. Messages persist in MongoDB. Everyone in the group can interact equally;
+there is no designated coach role or approval requirement. The
+configured dedicated iMessage line is **+1 628-502-7257** and must be assigned
+to the Photon project configured in `.env`. See [the Photon demo guide](PHOTON-DEMO.md).
+
+The **Your feedback timeline** section reopens previous coaching reports from
+MongoDB, newest first, with dates, recording names, and downloadable feedback.
+It remains available after the upload server restarts and does not store videos
+in the timeline. Use **Load earlier feedback** to browse older attempts.
 
 ## Command-line processing
 
@@ -104,3 +141,13 @@ All reported angles are **2D image-plane estimates**, not calibrated anatomical 
 The prototype does not determine official scores/GOE, legal sit depth, spin level, revolution count/RPM or ice-relative centering. High usable-frame coverage is not proof of a steady position, and a bent elbow or asymmetric shape is not automatically incorrect. Declaring a position wrong or prescribing ideal angles requires an intended spin variation and an expert reference; neither is inferred here. Model coaching remains a hackathon interpretation, not a validated judging system.
 
 MediaPipe reference: https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker/python
+
+### Upload skating clips through iMessage
+
+The existing web upload remains available. You can also send a video directly
+to the configured Photon line, from the configured feedback owner's phone,
+including in a group containing that owner and the AI. Start `npm run video-server`
+and `npm run photon`, with NVIDIA_API_KEY configured in .env. Send one clip of
+30 seconds or less and under 199 MB. The bot acknowledges the upload, runs the
+same analysis pipeline, saves feedback to the existing timeline/progress, and
+sends feedback back in the conversation. See [setup and limits](scripts/COACH.md#imessage-video-uploads).

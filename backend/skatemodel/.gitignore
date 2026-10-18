@@ -1,0 +1,9 @@
+.venv/
+runs/*
+!runs/thunder_l40/
+runs/thunder_l40/*
+!runs/thunder_l40/final_model.pt
+!runs/thunder_l40/final_metrics.json
+data/
+__pycache__/
+*.pyc

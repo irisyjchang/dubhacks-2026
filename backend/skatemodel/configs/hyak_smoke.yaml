@@ -1,0 +1,14 @@
+# 5-minute GPU smoke test on Hyak (real data, tiny schedule). Uses its own run dir.
+_base_: base.yaml
+train:
+  log_every: 10
+  ckpt_every: 50
+  eval_every: 100
+  stages:
+    - {name: clean, steps: 100, noise: false, lr: 5.0e-4, warmup: 20}
+    - {name: noisy, steps: 50, noise: true, lr: 2.0e-4, warmup: 10}
+eval:
+  max_programs: 8
+  test_at_end: false
+output:
+  dir: runs/hyak_smoke

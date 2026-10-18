@@ -1,0 +1,49 @@
+# iMessage video analysis through the Skate Coach API
+
+Set `MESSAGING_AGENT_API_URL` in `.env` to the current HTTPS tunnel from the
+backend owner, then restart `npm run photon`. The URL stays in configuration;
+it is not hardcoded into the integration. The API requires no key according to
+the supplied messaging-agent guide. Uploads send the video to that external API.
+
+With this variable set, incoming iMessage videos use the hosted API in place of
+the local port-8001 pipeline. The local web upload service remains available.
+
+1. Send one MP4, MOV, M4V, AVI, MKV, or WebM video under 199 MB in the owner's
+   DM or the coaching group. Current group membership, STOP, and mute rules
+   are checked before processing and again before sending results.
+2. The agent acknowledges the upload, then calls `POST /agent/analyze` with
+   `video`, `program_type`, and `perceptron_track`. Each request can run for
+   up to 20 minutes. This API supports longer programs; the local pipeline's
+   former 30-second limit does not apply here.
+3. The response's `message` is sent unchanged as text. The analysis ID is
+   stored per conversation, and the returned report is also saved to the
+   existing coach memory for ordinary questions. Model scores and move labels
+   remain predictions rather than official judging.
+4. Reply `3`, `move 3`, or `tell me about the third one`. The agent calls
+   `POST /agent/move` with that chat's analysis ID and `skeleton: true`, sends
+   its message unchanged, then attaches the normal and skeleton-overlay MP4s.
+   A new video replaces only that chat's active analysis. If the API reports no
+   numbered moves, the agent does not request move details.
+
+Optional settings: `MESSAGING_AGENT_PROGRAM_TYPE=unk|sp|fs` and
+`MESSAGING_AGENT_PERCEPTRON_TRACK=true|false`. Defaults match the supplied
+guide: unknown program type and person tracking enabled.
+
+Analysis responses and per-video upload GUIDs are saved under ignored
+`.coach/messaging-agent/`. Delivery retries reuse saved text, attachments, and
+stable Photon message keys. The same event is not re-analysed after its result
+has been saved. A process restart or timeout before receiving the analysis
+response can repeat remote computation: the API has no documented job lookup
+or idempotency guarantee. Transient HTTP/network failures retry once. Bad move
+numbers return a range hint; an expired analysis asks for a new upload.
+
+Videos are fetched only from the configured API origin, with redirects disabled
+and a size limit. Credentials and pipeline error logs are never forwarded to
+the chat. Temporary Cloudflare URLs change on restart; update the variable and
+resend the clip if the server no longer recognizes its analysis ID.
+
+This document's API is for video-analysis HTTP calls. It does not implement
+telephone calls or joining FaceTime. The existing SIP voice integration is
+separate.
+
+Verification: `node --test scripts/messaging-agent.test.mjs`.

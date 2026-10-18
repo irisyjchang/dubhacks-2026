@@ -1,0 +1,29 @@
+# MMFS on a Mac (MPS) / small GPU: ~3M-param model. Free local runs.
+_base_: mmfs_h100_30min.yaml
+model:
+  gcn_channels: [48, 48, 96, 96, 192, 192]
+  d_model: 192
+  tf_layers: 4
+  tf_heads: 6
+  tf_ffn: 768
+data:
+  window: 384
+  stride: 192
+  num_workers: 2
+train:
+  device: auto
+  batch_size: 8
+  compile: false
+  log_every: 20
+  eval_every: 500
+  stages:
+    - {name: clean, steps: 3000, noise: false, lr: 1.0e-3, warmup: 100}
+    - {name: noisy, steps: 1000, noise: true, lr: 3.0e-4, warmup: 50}
+infer:
+  window: 384
+  stride: 288
+  batch_size: 16
+eval:
+  max_programs: 20
+output:
+  dir: runs/mmfs_mac_small
