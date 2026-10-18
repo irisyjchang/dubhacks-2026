@@ -8,6 +8,26 @@ the supplied messaging-agent guide. Uploads send the video to that external API.
 With this variable set, incoming iMessage videos use the hosted API in place of
 the local port-8001 pipeline. The local web upload service remains available.
 
+The Photon listener also imports every completed video in the hosted web
+library (`GET /app/history`, then `GET /agent/analysis/{id}`) into MongoDB.
+It backfills existing reports on startup, checks every 30 seconds, and refreshes
+before answering questions or building voice context. Upload timestamps determine
+the default video, so backfills and slow processing cannot make an older upload
+appear newest. Repeated syncs and restarts reuse saved reports. Processing and
+failed uploads are excluded from report memory; the coach identifies when the
+newest upload does not yet have a completed report. If the library or newest
+completed report cannot be refreshed, text answers ask the user to retry instead
+of silently answering from an outdated report. Unavailable older reports are
+retried without blocking the latest report. The full library catalog is also
+persisted in MongoDB, including entries whose report endpoint is unavailable.
+
+This is a **shared library**: all uploads feed the coach belonging to the configured
+`PHOTON_ALLOWED_SENDER`, including its authorized groups. Reports are stored, not
+raw video files. No unsolicited report notifications are sent by this import.
+Set `PHOTON_LIBRARY_SYNC=false` to disable it. Keep `MESSAGING_AGENT_API_URL`
+pointed at the analysis backend (the same origin as the website's
+`NEXT_PUBLIC_SKATE_API_URL`), rather than the separate website tunnel.
+
 1. Send one MP4, MOV, M4V, AVI, MKV, or WebM video under 199 MB in the owner's
    DM or the coaching group. Current group membership, STOP, and mute rules
    are checked before processing and again before sending results.

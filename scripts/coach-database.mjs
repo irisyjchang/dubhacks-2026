@@ -46,6 +46,33 @@ export async function openCoachDatabase({ uri = process.env.MONGODB_URI || 'mong
         }, { upsert: true })
         return { ...analysis, id, inserted: result.upsertedCount === 1 }
       },
+      async importedLibraryIds() {
+        const rows = await analyses.find({ owner, libraryImported: true },
+          { projection: { sourceId: 1 } }).toArray()
+        return rows.map(row => row.sourceId)
+      },
+      async saveLibraryManifest(uploads) {
+        // History metadata can be corrected by the backend after analysis/import.
+        // Refresh it for known reports too, without downloading their text again.
+        const completed = uploads.filter(upload => upload.reportAvailable)
+        if (completed.length) await analyses.bulkWrite(completed.map(upload => ({ updateMany: {
+          filter: { owner, libraryImported: true, sourceId: `agent-${upload.analysisId}` },
+          update: { $set: { savedAt: upload.uploadedAt,
+            videoName: upload.videoName || `Upload ${upload.analysisId}` } },
+        } })))
+        await db.collection('coach_library').updateOne({ _id: owner },
+          { $set: { uploads, updatedAt: new Date().toISOString() } }, { upsert: true })
+      },
+      async saveHostedAnalysis(analysis) {
+        // Reuse an earlier iMessage record when its video enters the web library.
+        const existing = await analyses.findOne({ owner, source: 'spincoach', sourceId: analysis.sourceId })
+        if (existing?.libraryImported && !analysis.libraryImported) return existing
+        const id = existing?.id || analysisId({ source: 'spincoach', sourceId: analysis.sourceId })
+        const document = { ...analysis, id, owner }
+        await analyses.updateOne({ _id: `${owner}:${id}` }, analysis.libraryImported
+          ? { $set: document } : { $setOnInsert: document }, { upsert: true })
+        return { ...analysis, id, inserted: !existing }
+      },
       async list() {
         const rows = await analyses.find({ owner }, { projection: { _id: 0, owner: 0 } })
           .sort({ savedAt: -1, _id: -1 }).limit(20).toArray()
