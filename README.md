@@ -16,6 +16,45 @@ A local prototype that tracks the main skater, measures joint geometry, and prod
 The upload page on `main` is preserved. Text-coach tools, the group preview,
 and feedback history are available at **http://127.0.0.1:8000/coaching-tools**.
 
+## Live deployment
+
+The demo has two parts, the backend API and the Next.js frontend. Both run on a
+laptop and are published through Cloudflare quick tunnels. Nothing is hosted
+elsewhere, so the public URLs work only while the laptop is awake and all four
+processes below are running.
+
+| Part | Source | Local address | Public URL |
+| --- | --- | --- | --- |
+| Backend API | [dubhacks-backend](https://github.com/Rehan-shah/dubhacks-backend) (`backend/app.py`) | `http://127.0.0.1:8080` | `https://<random>.trycloudflare.com` |
+| Frontend | this repo, `frontend/` | `http://localhost:3001` | `https://<random>.trycloudflare.com` |
+
+Start the backend and its tunnel from the backend checkout. Put
+`GEMINI_API_KEY`, `NVIDIA_API_KEY` and, optionally, `PERCEPTRON_API_KEY` in
+`backend/.env` or the environment first.
+
+```sh
+backend/.venv/bin/uvicorn backend.app:app --host 127.0.0.1 --port 8080
+cloudflared tunnel --url http://localhost:8080
+```
+
+Copy the `https://….trycloudflare.com` URL that `cloudflared` prints into
+`frontend/.env.local` as `NEXT_PUBLIC_SKATE_API_URL` (see
+`frontend/.env.example`). Then start the frontend and its tunnel:
+
+```sh
+cd frontend
+npm run dev -- -p 3001
+cloudflared tunnel --url http://localhost:3001
+```
+
+Share the second tunnel's URL. `next.config.ts` already allows
+`*.trycloudflare.com` as a dev origin.
+
+Each `cloudflared tunnel --url …` restart gets a new random hostname. When the
+backend tunnel restarts, update `NEXT_PUBLIC_SKATE_API_URL` and restart Next.js,
+because the value is read at build time. When the frontend tunnel restarts,
+share its new URL.
+
 ## Setup
 
 The pipeline was tested on macOS with Python 3.9. MediaPipe provides platform-specific wheels; use a compatible Python/platform combination.
