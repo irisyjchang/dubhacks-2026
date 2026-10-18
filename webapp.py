@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, request, send_file
 
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = {'feedback.mp4', 'coaching_report.md', 'coaching_assessment.json',
@@ -130,7 +130,9 @@ def create_app(output_root=None, api_key=None, runner=run_pipeline):
 
     @app.get('/')
     def index():
-        return render_template('upload.html', key_configured=bool(server_key))
+        return jsonify(service='spin-coach', upload='POST /api/jobs',
+                       status='GET /api/jobs/<id>',
+                       files='GET /api/jobs/<id>/files/<filename>')
 
     @app.post('/api/jobs')
     def upload():

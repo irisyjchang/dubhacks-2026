@@ -70,6 +70,12 @@ class UploadTests(unittest.TestCase):
         self.app.config['MAX_CONTENT_LENGTH'] = 20
         self.assertEqual(self.upload().status_code, 413)
 
+    def test_index_describes_the_api(self):
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['upload'], 'POST /api/jobs')
+        self.assertNotIn('server-secret', json.dumps(response.json))
+
     def test_missing_key_never_silently_uses_local_templates(self):
         with patch.dict('os.environ', {}, clear=True):
             app = create_app(self.folder.name, api_key='', runner=lambda *args: None)
