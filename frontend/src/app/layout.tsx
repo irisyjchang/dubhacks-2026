@@ -82,6 +82,11 @@ export default function RootLayout({
             signUpUrl="/sign-up"
             signInFallbackRedirectUrl="/"
             signUpFallbackRedirectUrl="/"
+            afterSignOutUrl="/"
+            localization={{
+              signIn: { start: { title: `Sign in to ${APP_NAME}` } },
+              signUp: { start: { title: `Create your ${APP_NAME} account` } },
+            }}
           >
             {content}
           </ClerkProvider>

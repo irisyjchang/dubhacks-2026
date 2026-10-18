@@ -1,4 +1,4 @@
-export const APP_NAME = "SkateCue";
+export const APP_NAME = "With.";
 
 export const APP_DESCRIPTION = "Analyze, improve, train, and connect.";
 

@@ -31,10 +31,10 @@ export function AuthControls({ enabled }: { enabled: boolean }) {
 }
 
 export function WelcomeGreeting({ enabled }: { enabled: boolean }) {
-  return enabled ? <ClerkGreeting /> : <>Welcome back, skater</>;
+  return enabled ? <ClerkGreeting /> : <>Hi, skater</>;
 }
 
 function ClerkGreeting() {
   const { user } = useUser();
-  return <>Welcome back, {user?.firstName || user?.username || "skater"}</>;
+  return <>Hi, {user?.firstName || user?.fullName || user?.username || "skater"}</>;
 }

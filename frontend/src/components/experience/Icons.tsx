@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 export function Icon({ name, style }: { name: string; style?: CSSProperties }) {
   const paths: Record<string, React.ReactNode> = {
+    replay: <path d="M20 7a8 8 0 1 0 1 8M20 3v5h-5" />,
+    back: <path d="m12 5-7 7 7 7M5 12h15" />,
     add: <path d="M12 4v16M4 12h16" />,
     change: (
       <>

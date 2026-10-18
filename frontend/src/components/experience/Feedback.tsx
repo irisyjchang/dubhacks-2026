@@ -5,6 +5,7 @@ import { useSessionMedia } from "@/components/media/SessionMedia";
 import { skateApi } from "@/lib/api";
 import type { Analysis, MoveDetail, MoveView, ProgramType } from "@/types/api";
 import { Icon } from "./Icons";
+import { elementName } from "@/lib/element-names";
 export function Feedback({
   onClose,
   program,
@@ -22,7 +23,7 @@ export function Feedback({
   return (
     <aside className="feedback" aria-label="AI feedback">
       <div className="feedback-heading">
-        <span className="eyebrow">A closer look</span>
+        <h2>Feedback</h2>
         <button
           type="button"
           className="icon-button"
@@ -32,13 +33,11 @@ export function Feedback({
           <Icon name="close" />
         </button>
       </div>
-      <h2>On the ice.</h2>
       {status === "uploading" || status === "processing" ? (
         <p role="status" className="feedback-copy">
           {status === "uploading"
-            ? "Uploading your footage…"
-            : "Watching your movement…"}{" "}
-          You can keep watching while the analysis finishes.
+            ? "Uploading…"
+            : "Analyzing…"}
         </p>
       ) : null}
       {error && (
@@ -52,11 +51,11 @@ export function Feedback({
       {analysis && <Results key={analysis.analysis_id} analysis={analysis} />}
       {status === "idle" && (
         <p className="feedback-copy">
-          Add footage to see your technique, frame by frame.
+          Add a video to analyze it.
         </p>
       )}
       <details className="upload-settings">
-        <summary>For your next upload</summary>
+        <summary>Upload settings</summary>
         <label>
           Program
           <select
@@ -111,7 +110,7 @@ function Results({ analysis }: { analysis: Analysis }) {
           showPresentation({
             src: result.videos.skeleton,
             offset: move.segment.start_s,
-            label: `${move.name} · ${view === "skeleton_only" ? "Skeleton only" : "Skeleton"}`,
+            label: `${elementName(move)} · ${view === "skeleton_only" ? "Skeleton only" : "Skeleton"}`,
             kind: view,
           });
       })
@@ -184,7 +183,7 @@ function Results({ analysis }: { analysis: Analysis }) {
           >
             {analysis.moves.map((item) => (
               <option value={item.n} key={item.n}>
-                {item.name} · {item.code}
+                {elementName(item)}
               </option>
             ))}
           </select>
@@ -193,7 +192,7 @@ function Results({ analysis }: { analysis: Analysis }) {
       {move && (
         <>
           <div className="move-heading">
-            <h3>{move.name}</h3>
+            <h3>{elementName(move)}</h3>
             <span>
               {move.score.toFixed(1)}
               <small>/10</small>
@@ -260,7 +259,7 @@ function Results({ analysis }: { analysis: Analysis }) {
           )}
           {coaching.went_wrong.length > 0 && (
             <section className="coaching-section">
-              <h4>Refine</h4>
+              <h4>Issues</h4>
               {coaching.went_wrong.map((item, index) => (
                 <p key={index}>
                   {item.issue}
@@ -271,7 +270,7 @@ function Results({ analysis }: { analysis: Analysis }) {
           )}
           {coaching.improvements.length > 0 && (
             <section className="coaching-section">
-              <h4>Your next practice</h4>
+              <h4>Practice drills</h4>
               {coaching.improvements.map((item, index) => {
                 const key = `${selected}:${index}`;
                 return (
@@ -325,7 +324,7 @@ function Results({ analysis }: { analysis: Analysis }) {
                   src: videos.segment,
                   offset: move.segment.start_s,
                   kind: "segment",
-                  label: `${move.name} · Segment`,
+                  label: `${elementName(move)} · Segment`,
                 })
               }
             >
@@ -340,7 +339,7 @@ function Results({ analysis }: { analysis: Analysis }) {
                     src: videos.crop!,
                     offset: move.segment.start_s,
                     kind: "crop",
-                    label: `${move.name} · Skater crop`,
+                    label: `${elementName(move)} · Skater crop`,
                   })
                 }
               >
@@ -363,13 +362,13 @@ function Results({ analysis }: { analysis: Analysis }) {
                       src: result.videos.skeleton!,
                       offset: move.segment.start_s,
                       kind: value,
-                      label: `${move.name} · ${value.replaceAll("_", " ")}`,
+                      label: `${elementName(move)} · ${value.replaceAll("_", " ")}`,
                     });
                     setLoadingView(false);
                   } else setView(value);
                 }}
               >
-                {value === "skeleton" ? "Rendered skeleton" : "Skeleton only"}
+                {value === "skeleton" ? "Skeleton overlay" : "Skeleton only"}
               </button>
             ))}
           </div>

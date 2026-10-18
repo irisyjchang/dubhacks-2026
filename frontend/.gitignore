@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Public configuration template
 !.env.example
+
+# Required browser pose model, not a task scratch file.
+!public/mediapipe/pose_landmarker_lite.task

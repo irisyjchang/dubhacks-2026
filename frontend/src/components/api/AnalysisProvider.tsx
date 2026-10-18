@@ -9,7 +9,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { skateApi, waitForAnalysis } from "@/lib/api";
+import { cropSource } from "@/lib/player-source";
+import { elementName } from "@/lib/element-names";
+import { skateApi, waitForAnalysis, withPlayerView } from "@/lib/api";
 import { useSessionMedia } from "@/components/media/SessionMedia";
 import type {
   Analysis,
@@ -28,19 +30,21 @@ type State = {
   startUpload: (file: File, program: ProgramType, track: boolean) => void;
   openAnalysis: (id: string, video?: HistoryVideo) => void;
   retry: () => void;
+  selectMove: (n: number) => Promise<void>;
 };
 const Context = createContext<State | null>(null);
 const storageKey = "skatecue.analysisId";
 type RunOptions = { preserveFootage?: boolean; id?: string; fileName?: string };
 
 export function AnalysisProvider({ children }: { children: ReactNode }) {
-  const { setRemote, associateAnalysis, videoRef } = useSessionMedia();
+  const { setRemote, associateAnalysis, showPresentation } = useSessionMedia();
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [filename, setFilename] = useState("");
   const controller = useRef<AbortController | null>(null);
+  const moveController = useRef<AbortController | null>(null);
   const activeId = useRef<string | null>(null);
   const failed = useRef(false);
   const cache = useRef(new Map<string, Analysis>());
@@ -53,6 +57,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       uploading = false,
     ) {
       controller.current?.abort();
+      moveController.current?.abort();
       failed.current = false;
       const task = new AbortController();
       controller.current = task;
@@ -84,7 +89,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
           }
           retryAction.current = () =>
             run((signal) => skateApi.analysis(id, signal), { ...options, id });
-          const result = await waitForAnalysis(initial, task.signal, () =>
+          let result = await waitForAnalysis(initial, task.signal, () =>
             setStatus("processing"),
           );
           if (task.signal.aborted) return;
@@ -92,22 +97,21 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
             throw new Error(
               "The API returned an incomplete analysis. Please retry.",
             );
+          result = await withPlayerView(result, task.signal);
+          if (!result.player_view?.crop_video_url && result.moves.length > 0) {
+            try { result = { ...result, default_move: await skateApi.move(id, result.moves[0].n, "normal", task.signal) }; }
+            catch { if (task.signal.aborted) return; }
+          }
+          if (task.signal.aborted) return;
           cache.current.set(id, result);
           if (cache.current.size > 5)
             cache.current.delete(cache.current.keys().next().value!);
           setAnalysis(result);
-          // Results attach to the selected footage. Completing analysis must not reload its player.
-          if (options.preserveFootage) {
-            associateAnalysis(id);
-            // Unsupported local codecs can use the API's H.264 conversion.
-            if (videoRef.current?.error)
-              setRemote(
-                result.video_url,
-                undefined,
-                { analysisId: id, fileName: options.fileName },
-                true,
-              );
-          } else setRemote(result.video_url, undefined, { analysisId: id });
+          const source = result.video_url;
+          // Replace the upload preview with the processed API video, keeping playback position.
+          setRemote(source, undefined, { analysisId: id, fileName: options.fileName }, true);
+          const crop = cropSource(result, result.default_move);
+          if (crop) showPresentation({ ...crop, kind: "crop", label: crop.move ? `${elementName(result.moves.find((move) => move.n === crop.move) || {})} · Skater crop` : "Skater crop" });
           setStatus("ready");
         } catch (cause) {
           if (task.signal.aborted) return;
@@ -121,7 +125,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         }
       })();
     },
-    [associateAnalysis, setRemote, videoRef],
+    [associateAnalysis, setRemote, showPresentation],
   );
 
   const openAnalysis = useCallback(
@@ -142,6 +146,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       const stored = cache.current.get(id);
       if (stored) {
         controller.current?.abort();
+        moveController.current?.abort();
         activeId.current = id;
         setAnalysis(stored);
         setAnalysisId(id);
@@ -151,6 +156,8 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
           analysisId: id,
           fileName: video?.filename || undefined,
         });
+        const crop = cropSource(stored, stored.default_move);
+        if (crop) showPresentation({ ...crop, kind: "crop", label: "Skater crop" });
         try {
           localStorage.setItem(storageKey, id);
         } catch {
@@ -160,8 +167,17 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       }
       run((signal) => skateApi.analysis(id, signal), { id });
     },
-    [run, setRemote],
+    [run, setRemote, showPresentation],
   );
+  const selectMove = useCallback(async (n: number) => {
+    if (!analysis) return;
+    moveController.current?.abort();
+    const task = new AbortController();
+    moveController.current = task;
+    const detail = analysis.default_move?.move.n === n ? analysis.default_move : await skateApi.move(analysis.analysis_id, n, "normal", task.signal);
+    if (task.signal.aborted) return;
+    showPresentation({ src: detail.videos.crop || detail.videos.segment, offset: detail.move.segment.start_s, pose: detail.pose, move: n, kind: detail.videos.crop ? "crop" : "segment", label: elementName(analysis.moves.find((move) => move.n === n) || {}) }, { time: 0, play: false });
+  }, [analysis, showPresentation]);
   const startUpload = useCallback(
     (file: File, program: ProgramType, track: boolean) => {
       setFilename(file.name);
@@ -194,6 +210,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
       controller.current?.abort();
+      moveController.current?.abort();
     };
   }, [openAnalysis]);
   return (
@@ -205,6 +222,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         error,
         filename,
         startUpload,
+        selectMove,
         openAnalysis,
         retry: () => retryAction.current(),
       }}

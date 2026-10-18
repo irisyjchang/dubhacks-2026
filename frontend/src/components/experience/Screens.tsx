@@ -1,8 +1,6 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { WelcomeGreeting } from "@/components/auth/AuthControls";
 import { useSessionMedia } from "@/components/media/SessionMedia";
 import { useAnalysis } from "@/components/api/AnalysisProvider";
 import { useAnalysisRoute } from "@/lib/use-analysis-route";
@@ -11,22 +9,18 @@ import type { HistoryVideo } from "@/types/api";
 import { useExperience } from "./ExperienceShell";
 import { Icon } from "./Icons";
 
-export function HomeScreen({ authEnabled }: { authEnabled: boolean }) {
+export function HomeScreen() {
   useAnalysisRoute();
   const { media } = useSessionMedia();
   const { chooseFootage } = useExperience();
   if (media.src) return null;
   return (
     <section className="welcome-scene">
-      <p className="eyebrow">A little closer to your best.</p>
-      <h1>
-        <WelcomeGreeting enabled={authEnabled} />
-      </h1>
+      <h1>Video review</h1>
       <button type="button" className="add-footage" onClick={chooseFootage}>
         <Icon name="add" />
-        <span>Add Footage</span>
+        <span>Add video</span>
       </button>
-      <p className="welcome-note">Your movement. A new perspective.</p>
     </section>
   );
 }
@@ -34,21 +28,20 @@ export function AnalysisScreen() {
   useAnalysisRoute();
   const { media } = useSessionMedia();
   const { chooseFootage, openFeedback } = useExperience();
-  const { analysis, status } = useAnalysis();
+  const { analysis } = useAnalysis();
   if (!media.src)
     return (
       <section className="welcome-scene">
-        <p className="eyebrow">See the smallest details.</p>
-        <h1>It starts with your footage.</h1>
+        <h1>Analysis</h1>
         <button type="button" className="add-footage" onClick={chooseFootage}>
           <Icon name="add" />
-          <span>Add Footage</span>
+          <span>Add video</span>
         </button>
       </section>
     );
   return (
     <div className="analysis-caption">
-      <h1>In motion.</h1>
+      <h1>Analysis</h1>
       {analysis && (
         <button
           type="button"
@@ -62,22 +55,18 @@ export function AnalysisScreen() {
           </span>
           <span>
             {analysis.moves.length}{" "}
-            {analysis.moves.length === 1 ? "element" : "elements"} observed{" "}
+            {analysis.moves.length === 1 ? "element" : "elements"}{" "}
             <span aria-hidden="true">↗</span>
           </span>
         </button>
-      )}
-      {status === "ready" && !analysis && (
-        <p className="quiet">Your footage is ready.</p>
       )}
     </div>
   );
 }
 export function LibraryScreen() {
-  const router = useRouter();
   const { media } = useSessionMedia();
-  const { openAnalysis, analysisId, status } = useAnalysis();
-  const { chooseFootage } = useExperience();
+  const { analysisId, status } = useAnalysis();
+  const { chooseFootage, openClip } = useExperience();
   const [videos, setVideos] = useState<HistoryVideo[] | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -115,14 +104,13 @@ export function LibraryScreen() {
     <section className="library-scene">
       <div className="library-heading">
         <div>
-          <p className="eyebrow">Time, collected.</p>
-          <h1>Your footage.</h1>
+          <h1>Library</h1>
         </div>
         <button
           type="button"
           className="icon-button"
-          aria-label="Add Footage"
-          title="Add Footage"
+          aria-label="Add video"
+          title="Add video"
           onClick={chooseFootage}
         >
           <Icon name="add" />
@@ -142,12 +130,12 @@ export function LibraryScreen() {
       )}
       {!videos && !error && (
         <p className="library-message" role="status">
-          Gathering your footage…
+          Loading videos…
         </p>
       )}
       {videos?.length === 0 && (
         <p className="library-message">
-          Your next moment belongs here. Add footage to begin.
+          No videos yet. Use + to add one.
         </p>
       )}
       <div className="footage-archive">
@@ -160,8 +148,7 @@ export function LibraryScreen() {
             aria-pressed={media.analysisId === video.analysis_id}
             disabled={video.status === "failed" && !video.video_url}
             onClick={() => {
-              openAnalysis(video.analysis_id, video);
-              router.push("/");
+              openClip(video.analysis_id, video);
             }}
           >
             <div className="archive-image">

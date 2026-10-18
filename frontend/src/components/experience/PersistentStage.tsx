@@ -3,6 +3,8 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useSessionMedia } from "@/components/media/SessionMedia";
 import { useAnalysis } from "@/components/api/AnalysisProvider";
 import { PoseCanvas } from "@/components/analysis/PoseCanvas";
+import { Icon } from "./Icons";
+import { isPortraitCrop } from "@/lib/player-source";
 
 export function PersistentStage({
   pose,
@@ -22,8 +24,20 @@ export function PersistentStage({
   } = useSessionMedia();
   const { analysis } = useAnalysis();
   const src = presentation?.src || media.src;
+  const stageRef = useRef<HTMLDivElement>(null);
+  const atmosphereRef = useRef<HTMLCanvasElement>(null);
+  const [fullscreen, setFullscreen] = useState(false);
   const sampledSource = useRef("");
   const [aspect, setAspect] = useState(16 / 9);
+  const [sourceDimensions, setSourceDimensions] = useState({ src: "", width: 0, height: 0 });
+  const immersiveCrop = presentation?.kind === "crop" && sourceDimensions.src === src
+    && isPortraitCrop(sourceDimensions.width, sourceDimensions.height);
+  useEffect(() => {
+    const syncFullscreen = () =>
+      setFullscreen(document.fullscreenElement === stageRef.current);
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !src) return;
@@ -79,14 +93,39 @@ export function PersistentStage({
     };
   }, [src, videoRef, updateLook]);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    const canvas = atmosphereRef.current;
+    const context = canvas?.getContext("2d");
+    if (!video || !canvas || !context || !src) return;
+    const draw = () => {
+      if (video.readyState < 2 || !video.videoWidth) return;
+      const height = Math.max(1, Math.round(160 * video.videoHeight / video.videoWidth));
+      if (canvas.width !== 160 || canvas.height !== height) {
+        canvas.width = 160;
+        canvas.height = height;
+      }
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    };
+    video.addEventListener("loadeddata", draw);
+    video.addEventListener("seeked", draw);
+    const timer = window.setInterval(() => { if (!video.paused) draw(); }, 125);
+    draw();
+    return () => {
+      window.clearInterval(timer);
+      video.removeEventListener("loadeddata", draw);
+      video.removeEventListener("seeked", draw);
+    };
+  }, [src, videoRef]);
+
+  const activePose = presentation ? presentation.pose : analysis?.pose;
   const showPose = Boolean(
-    analysis?.pose &&
-      analysis.analysis_id === media.analysisId &&
-      !presentation &&
+    playback.ready &&
+      analysis?.analysis_id === media.analysisId &&
       (pose || geometry),
   );
   return (
-    <div className="video-stage" aria-label="Active footage">
+    <div ref={stageRef} className="video-stage" aria-label="Active footage">
       <div className="scene-wash" />
       {media.poster && (
         <div
@@ -94,20 +133,26 @@ export function PersistentStage({
           style={{ backgroundImage: `url("${media.poster}")` }}
         />
       )}
+      <canvas ref={atmosphereRef} className="scene-live" aria-hidden="true" />
       <video
         data-testid="footage-player"
         ref={videoRef}
-        className="footage-player"
-        style={{ "--video-aspect": aspect } as CSSProperties}
+        className={`footage-player${immersiveCrop ? " footage-cropped" : ""}`}
+        style={{
+          "--video-aspect": aspect,
+          ...(immersiveCrop ? { objectFit: "cover", maskImage: "none" } : {}),
+        } as CSSProperties}
         src={src || undefined}
         crossOrigin="anonymous"
         playsInline
+        controls={fullscreen}
         loop
         preload="auto"
         muted={playback.muted}
         onLoadedMetadata={(event) => {
           const video = event.currentTarget;
           setAspect(video.videoWidth / video.videoHeight || 16 / 9);
+          setSourceDimensions({ src, width: video.videoWidth, height: video.videoHeight });
           video.playbackRate = playback.rate;
           const pending = pendingPlaybackRef.current;
           if (pending) {
@@ -142,12 +187,26 @@ export function PersistentStage({
       {showPose && (
         <PoseCanvas
           videoRef={videoRef}
-          pose={analysis!.pose!}
+          pose={activePose}
+          source={src}
+          fit={immersiveCrop ? "cover" : "contain"}
           geometry={geometry}
           showSkeleton={pose}
         />
       )}
       <div className="scene-feather" />
+      <button
+        type="button"
+        className="fullscreen-back"
+        aria-label="Back to previous view"
+        onClick={() => {
+          if (document.fullscreenElement === stageRef.current)
+            void document.exitFullscreen().catch(() => {});
+        }}
+      >
+        <Icon name="back" />
+        <span>Back</span>
+      </button>
     </div>
   );
 }

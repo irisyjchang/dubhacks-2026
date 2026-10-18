@@ -13,7 +13,7 @@ export function AuthPage({ children }: { children: ReactNode }) {
         href="/"
         className="text-sm text-white underline underline-offset-4"
       >
-        Back to skating
+        Home
       </Link>
     </main>
   );
@@ -25,10 +25,9 @@ export function ClerkSetupNotice() {
       role="status"
       className="w-full max-w-sm rounded-2xl bg-white p-6 text-[#17181c] shadow-xl"
     >
-      <h1 className="text-xl font-medium">Sign-in is being connected</h1>
+      <h1 className="text-xl font-medium">Sign-in unavailable</h1>
       <p className="mt-3 text-sm leading-6 text-black/65">
-        This app needs its existing Clerk application configuration before you
-        can log in. You can still browse your footage while it is connected.
+        You can still review videos without signing in.
       </p>
     </section>
   );

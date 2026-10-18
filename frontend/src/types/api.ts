@@ -46,6 +46,7 @@ export interface MoveDetail {
   };
   detail: Coaching;
   videos: MoveVideos;
+  pose?: Pose;
 }
 export interface Analysis {
   analysis_id: string;
@@ -57,10 +58,20 @@ export interface Analysis {
   summary: { went_right: string; could_improve: string };
   moves: Move[];
   video_url: string;
+  player_view?: PlayerView;
+  default_move?: MoveDetail;
   pose?: Pose;
   coach?: { model: string };
   person_tracking?: { status: string; warning?: string | null };
   single_move?: { detail: Coaching; videos: MoveVideos };
+}
+export interface PlayerView {
+  analysis_id: string;
+  video_url: string;
+  cropped: boolean;
+  crop_video_url?: string | null;
+  pose?: Pose;
+  timeline: (Move & { jump_to_s: number })[];
 }
 export interface Processing {
   analysis_id: string;

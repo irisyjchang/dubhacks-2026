@@ -4,6 +4,7 @@ export type VideoFrame = { time: number; image: string };
 export async function extractVideoFrames(
   src: string,
   signal: AbortSignal,
+  timestamps?: readonly number[],
 ): Promise<VideoFrame[]> {
   const video = document.createElement("video");
   video.crossOrigin = "anonymous";
@@ -55,11 +56,14 @@ export async function extractVideoFrames(
     const context = canvas.getContext("2d");
     if (!context) return [];
     const frames: VideoFrame[] = [];
-    for (let index = 0; index < 7; index++) {
+    const times = timestamps?.length
+      ? timestamps
+      : Array.from({ length: 7 }, (_, index) => (index / 7) * video.duration);
+    for (const timestamp of times) {
       if (signal.aborted) throw new DOMException("Aborted", "AbortError");
       const time = Math.max(
         0,
-        Math.min(video.duration - 0.01, (index / 7) * video.duration),
+        Math.min(video.duration - 0.01, timestamp),
       );
       if (Math.abs(video.currentTime - time) > 0.001) {
         const seeked = waitFor("seeked");

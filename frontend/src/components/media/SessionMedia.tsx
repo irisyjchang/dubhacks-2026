@@ -24,7 +24,11 @@ export type SessionMedia = {
   accent: string;
   tint: { r: number; g: number; b: number };
 };
+import type { Pose } from "@/types/api";
+
 export type VideoPresentation = {
+  pose?: Pose;
+  move?: number;
   src: string;
   offset: number;
   label: string;
@@ -50,6 +54,7 @@ type MediaContext = {
   videoRef: RefObject<HTMLVideoElement | null>;
   pendingPlaybackRef: RefObject<{ time: number; play: boolean } | null>;
   presentation: VideoPresentation | null;
+  croppedPresentation: VideoPresentation | null;
   playback: Playback;
   setUpload: (file: File) => void;
   setRemote: (
@@ -67,7 +72,7 @@ type MediaContext = {
   seek: (time: number, pause?: boolean) => void;
   setRate: (rate: number) => void;
   toggleMuted: () => void;
-  showPresentation: (presentation: VideoPresentation) => void;
+  showPresentation: (presentation: VideoPresentation, position?: { time: number; play: boolean }) => void;
   showOriginal: () => void;
 };
 const EMPTY: SessionMedia = {
@@ -103,6 +108,7 @@ export function SessionMediaProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [playback, setPlayback] = useState(INITIAL_PLAYBACK);
+  const [croppedPresentation, setCroppedPresentation] = useState<VideoPresentation | null>(null);
   const commit = useCallback((next: SessionMedia) => {
     snapshot.current = next;
     setMedia(next);
@@ -123,6 +129,7 @@ export function SessionMediaProvider({ children }: { children: ReactNode }) {
       objectUrl.current = src;
       pendingPlaybackRef.current = { time: 0, play: true };
       resetPresentation();
+      setCroppedPresentation(null);
       setUploadFile(file);
       setPlayback({
         ...INITIAL_PLAYBACK,
@@ -168,19 +175,26 @@ export function SessionMediaProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
+      const previous = videoRef.current;
+      const preservePlayback = Boolean(force && current.analysisId === metadata.analysisId && previous);
+      const resume = preservePlayback && previous
+        ? { time: previous.currentTime, play: !previous.paused }
+        : { time: 0, play: true };
       releaseUpload();
       setUploadFile(null);
       resetPresentation();
-      pendingPlaybackRef.current = { time: 0, play: true };
+      setCroppedPresentation(null);
+      pendingPlaybackRef.current = resume;
       setPlayback({
         ...INITIAL_PLAYBACK,
+        rate: preservePlayback ? previous?.playbackRate ?? 1 : 1,
         muted: videoRef.current?.muted ?? true,
       });
       commit({
         ...current,
         ...metadata,
-        fileName: metadata.fileName,
-        uploadedAt: metadata.uploadedAt,
+        fileName: metadata.fileName ?? current.fileName,
+        uploadedAt: metadata.uploadedAt ?? current.uploadedAt,
         analysisId: metadata.analysisId,
         src,
         kind: "video",
@@ -243,10 +257,16 @@ export function SessionMediaProvider({ children }: { children: ReactNode }) {
       updatePlayback({ muted: video.muted });
     }
   }, [updatePlayback]);
-  const showPresentation = useCallback((next: VideoPresentation) => {
+  const showPresentation = useCallback((next: VideoPresentation, position?: { time: number; play: boolean }) => {
     const video = videoRef.current;
-    if (presentationRef.current?.src === next.src) return;
-    pendingPlaybackRef.current = {
+    if (next.kind === "crop") setCroppedPresentation(next);
+    if (presentationRef.current?.src === next.src) {
+      if (position && video) { video.currentTime = position.time; if (!position.play) video.pause(); }
+      presentationRef.current = next;
+      setPresentation(next);
+      return;
+    }
+    pendingPlaybackRef.current = position ?? {
       time: Math.max(
         0,
         (video?.currentTime || 0) +
@@ -282,6 +302,7 @@ export function SessionMediaProvider({ children }: { children: ReactNode }) {
       videoRef,
       pendingPlaybackRef,
       presentation,
+      croppedPresentation,
       playback,
       setUpload,
       setRemote,
@@ -299,6 +320,7 @@ export function SessionMediaProvider({ children }: { children: ReactNode }) {
       media,
       uploadFile,
       presentation,
+      croppedPresentation,
       playback,
       setUpload,
       setRemote,

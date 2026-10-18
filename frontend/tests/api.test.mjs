@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { ApiError, delay, skateApi, waitForAnalysis } from "../src/lib/api.ts";
+import { ApiError, delay, skateApi, waitForAnalysis, withPlayerView } from "../src/lib/api.ts";
 
 const originalFetch = globalThis.fetch;
 const originalUrl = process.env.NEXT_PUBLIC_SKATE_API_URL;
@@ -140,6 +140,47 @@ test("missing API configuration gives an actionable error without a request", as
   };
   await assert.rejects(
     skateApi.history(controller().signal),
-    /NEXT_PUBLIC_SKATE_API_URL/,
+    /Video analysis is unavailable/,
   );
+});
+
+
+test("keeps crop pose on the player view instead of applying it to full video", async () => {
+  const pose = { width: 500, height: 720, frames: [] };
+  globalThis.fetch = async (url) => {
+    assert.equal(url, "https://api.example.test/app/view/clip123");
+    return json({ cropped: true, crop_video_url: "https://api.example.test/crop.mp4", pose, timeline: [] });
+  };
+  const result = await withPlayerView(done, controller().signal);
+  assert.equal(result.pose, undefined);
+  assert.deepEqual(result.player_view.pose, pose);
+  assert.equal(result.player_view.crop_video_url, "https://api.example.test/crop.mp4");
+});
+
+test("loading a crop view preserves the original video's coordinate system", async () => {
+  const original = { width: 1920, height: 1080, frames: [] };
+  const cropped = { width: 606, height: 1080, frames: [] };
+  globalThis.fetch = async () => json({ cropped: true, pose: cropped });
+  const result = await withPlayerView({ ...done, pose: original }, controller().signal);
+  assert.deepEqual(result.pose, original);
+  assert.deepEqual(result.player_view.pose, cropped);
+});
+
+test("older deployments without /app/view keep the finished analysis", async () => {
+  globalThis.fetch = async () => json({ detail: "Not Found" }, 404);
+  assert.equal(await withPlayerView(done, controller().signal), done);
+});
+
+test("canceling player view loading does not return a stale analysis", async () => {
+  const task = controller();
+  globalThis.fetch = async () => { task.abort(); throw task.signal.reason; };
+  await assert.rejects(withPlayerView(done, task.signal), { name: "AbortError" });
+});
+
+
+test("a player view without pose data retains the completed analysis pose", async () => {
+  const pose = { width: 720, height: 1280, frames: [] };
+  globalThis.fetch = async () => json({ cropped: false, video_url: "video.mp4", timeline: [] });
+  const result = await withPlayerView({ ...done, pose }, controller().signal);
+  assert.deepEqual(result.pose, pose);
 });

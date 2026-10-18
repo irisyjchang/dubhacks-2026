@@ -5,6 +5,7 @@ import type {
   MoveView,
   Processing,
   ProgramType,
+  PlayerView,
 } from "../types/api";
 
 export class ApiError extends Error {
@@ -22,7 +23,7 @@ function apiUrl(path: string) {
   );
   if (!base)
     throw new ApiError(
-      "Set NEXT_PUBLIC_SKATE_API_URL in .env.local to connect your skating API.",
+      "Video analysis is unavailable.",
       0,
     );
   return `${base}${path}`;
@@ -118,6 +119,8 @@ export const skateApi = {
     body.append("perceptron_track", String(track));
     return request<Analysis | Processing>("/app/analyze", signal, body);
   },
+  view: (id: string, signal: AbortSignal) =>
+    request<PlayerView>(`/app/view/${encodeURIComponent(id)}`, signal),
   move: (id: string, n: number, view: MoveView, signal: AbortSignal) =>
     request<MoveDetail>(
       `/app/moves/${encodeURIComponent(id)}/${n}?view=${view}`,
@@ -137,4 +140,16 @@ export async function waitForAnalysis(
     result = await skateApi.analysis(result.analysis_id, signal);
   }
   return result;
+}
+
+/** The deployed API may predate /app/view; keep the finished analysis usable. */
+export async function withPlayerView(analysis: Analysis, signal: AbortSignal): Promise<Analysis> {
+  try {
+    const view = await skateApi.view(analysis.analysis_id, signal);
+    // Crop coordinates belong only to the crop presentation.
+    return { ...analysis, player_view: view, pose: analysis.pose ?? (!view.cropped ? view.pose : undefined) };
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return analysis;
+  }
 }

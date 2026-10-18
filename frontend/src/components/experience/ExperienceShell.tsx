@@ -1,25 +1,29 @@
 "use client";
 import Link from "next/link";
+import { APP_NAME } from "@/lib/constants";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   useContext,
+  useEffect,
   useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { AuthControls } from "@/components/auth/AuthControls";
+import { AuthControls, WelcomeGreeting } from "@/components/auth/AuthControls";
 import { useSessionMedia } from "@/components/media/SessionMedia";
 import { useAnalysis } from "@/components/api/AnalysisProvider";
-import type { ProgramType } from "@/types/api";
+import type { HistoryVideo, ProgramType } from "@/types/api";
 import { PersistentStage } from "./PersistentStage";
 import { Timeline } from "./Timeline";
 import { Feedback } from "./Feedback";
 import { Icon } from "./Icons";
+import "./immersive.css";
 const Experience = createContext<{
   chooseFootage: () => void;
   openFeedback: () => void;
+  openClip: (id: string, video: HistoryVideo) => void;
 } | null>(null);
 export function useExperience() {
   const value = useContext(Experience);
@@ -35,9 +39,25 @@ export function ExperienceShell({
 }) {
   const path = usePathname();
   const router = useRouter();
-  const { media, setUpload, playback, setRate, presentation, showOriginal } =
+  const { media, setUpload, playback, setRate, presentation, croppedPresentation, showPresentation, showOriginal } =
     useSessionMedia();
-  const { analysis, status, error, startUpload, retry } = useAnalysis();
+  const { analysis, analysisId, status, error, filename, startUpload, openAnalysis, retry } = useAnalysis();
+  const pendingAnalysis = useRef<string | true | null>(null);
+  useEffect(() => {
+    if (status === "ready" && pendingAnalysis.current &&
+      (pendingAnalysis.current === true || pendingAnalysis.current === analysisId)) {
+      pendingAnalysis.current = null;
+      router.push("/analysis");
+    }
+  }, [status, analysisId, router]);
+  const openClip = (id: string, video: HistoryVideo) => {
+    if (analysisId === id && status === "ready") {
+      router.push("/analysis");
+      return;
+    }
+    pendingAnalysis.current = id;
+    openAnalysis(id, video);
+  };
   const input = useRef<HTMLInputElement>(null);
   const [pose, setPose] = useState(false);
   const [geometry, setGeometry] = useState(false);
@@ -51,9 +71,8 @@ export function ExperienceShell({
     path.startsWith("/sign-") || path === "/login" || path === "/signup";
   const hasVideo = Boolean(media.src);
   const hasPose = Boolean(
-    analysis?.pose &&
-      analysis.analysis_id === media.analysisId &&
-      !presentation,
+    playback.ready &&
+      analysis?.analysis_id === media.analysisId,
   );
   const chooseFootage = () => input.current?.click();
   const style = {
@@ -61,7 +80,7 @@ export function ExperienceShell({
   } as CSSProperties;
   return (
     <Experience.Provider
-      value={{ chooseFootage, openFeedback: () => setFeedback(true) }}
+      value={{ chooseFootage, openClip, openFeedback: () => setFeedback(true) }}
     >
       <div
         className={`experience ${hasVideo ? "has-footage" : "is-empty"} ${isAnalysis ? "is-analysis" : ""} ${isLibrary ? "is-library" : ""} ${isAuth ? "is-auth" : ""} ${feedback && isAnalysis ? "feedback-open" : ""}`}
@@ -72,16 +91,19 @@ export function ExperienceShell({
           geometry={isAnalysis && geometry}
         />
         <header className="app-header">
-          <Link href="/" className="wordmark" aria-label="SkateCue Home">
-            SkateCue
+          <Link href="/" className="wordmark" aria-label={`${APP_NAME} Home`}>
+            {APP_NAME}
           </Link>
           <div className="account-actions">
+            {path === "/" && (
+              <span className="home-greeting"><WelcomeGreeting enabled={authEnabled} /></span>
+            )}
             {hasVideo && !isAuth && (
               <button
                 type="button"
                 className="icon-button"
-                aria-label="Change Footage"
-                title="Change Footage"
+                aria-label="Replace video"
+                title="Replace video"
                 onClick={chooseFootage}
               >
                 <Icon name="change" />
@@ -112,30 +134,33 @@ export function ExperienceShell({
             setGeometry(false);
             setFeedback(false);
             setUpload(file);
+            pendingAnalysis.current = true;
             startUpload(file, program, track);
-            router.push("/");
           }}
         />
         <main className="route-content">{children}</main>
         {!isAuth && hasVideo && !isLibrary && (
           <div className="footage-caption">
-            <span className="eyebrow">
-              {isAnalysis
-                ? "Every movement, understood."
-                : "Your time on the ice."}
-            </span>
-            {presentation && (
-              <button
-                type="button"
-                className="text-action"
-                onClick={showOriginal}
-              >
-                Return to full footage
-              </button>
-            )}
+            <div className="video-view-toggle" role="group" aria-label="Video framing">
+              <button type="button" aria-pressed={!presentation} onClick={showOriginal}>Full video</button>
+              <button type="button" aria-pressed={presentation?.kind === "crop"}
+                disabled={!croppedPresentation}
+                title={croppedPresentation ? "Show the skater crop" : "Cropped video becomes available after analysis"}
+                onClick={() => { if (croppedPresentation) showPresentation(croppedPresentation); }}>Cropped</button>
+            </div>
           </div>
         )}
-        {!isAuth && !isLibrary && (
+        {!isAuth && (status === "uploading" || status === "processing") && (
+          <div className="processing-overlay">
+            <div className="processing-card" role="status" aria-live="polite" aria-atomic="true">
+              <span className="processing-ring" aria-hidden="true" />
+              <h2>{status === "uploading" ? "Uploading your video" : "Your video is processing"}</h2>
+              {filename && <p className="processing-filename">{filename}</p>}
+              <p>Analysis will open automatically when it’s ready.</p>
+            </div>
+          </div>
+        )}
+        {!isAuth && (
           <div className="stage-notice" aria-live="polite">
             {fileError || playback.error ? (
               <p role="alert">{fileError || playback.error}</p>
@@ -155,14 +180,6 @@ export function ExperienceShell({
                 >
                   Details
                 </button>
-              </p>
-            ) : hasVideo &&
-              (status === "uploading" || status === "processing") ? (
-              <p>
-                <span className="breathing-dot" />
-                {status === "uploading"
-                  ? "Sending footage"
-                  : "Finding the details"}
               </p>
             ) : null}
           </div>
@@ -242,7 +259,7 @@ export function ExperienceShell({
           className="persistent-controls"
           hidden={isAuth || isLibrary || !hasVideo}
         >
-          <Timeline detailed={isAnalysis} />
+          <Timeline detailed={isAnalysis || status === "ready"} />
         </div>
         {!isAuth && (
           <nav className="main-nav" aria-label="Main navigation">
@@ -254,6 +271,7 @@ export function ExperienceShell({
               <Link
                 key={href}
                 href={href}
+                onClick={() => { pendingAnalysis.current = null; }}
                 aria-current={
                   (href === "/analysis" ? isAnalysis : path === href)
                     ? "page"
