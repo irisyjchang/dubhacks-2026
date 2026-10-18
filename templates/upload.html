@@ -18,6 +18,7 @@
     --nav: rgba(244, 245, 244, 0.78);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; min-height: 100%; }
   body {
     background:
@@ -29,17 +30,39 @@
     transition: color 0.6s ease, background-color 0.6s ease;
   }
   body.has-clip {
-    background: var(--field);
-    --ink: #f4f5f4;
-    --muted: rgba(244, 245, 244, 0.7);
-    --frost: rgba(18, 20, 22, 0.42);
-    --frost-strong: rgba(14, 16, 18, 0.88);
-    --wash: rgba(12, 14, 16, 0.8);
-    --wash-top: rgba(12, 14, 16, 0.28);
-    --hair: rgba(244, 245, 244, 0.22);
-    --nav: rgba(10, 12, 14, 0.62);
-    --field: #101214;
-    color-scheme: dark;
+    background: transparent;
+    --ink: #1c1e21;
+    --muted: rgba(28, 30, 33, 0.62);
+    --frost: rgba(244, 245, 244, 0.58);
+    --frost-strong: rgba(244, 245, 244, 0.92);
+    --wash: rgba(244, 245, 244, 0);
+    --wash-top: rgba(244, 245, 244, 0);
+    --hair: rgba(28, 30, 33, 0.16);
+    --nav: rgba(244, 245, 244, 0.74);
+    --field: #f4f5f4;
+    color-scheme: light;
+  }
+  body.has-clip .top,
+  body.has-clip .tabs {
+    color: #f7f7f5;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
+  }
+  body.has-clip .tabs button { color: rgba(247, 247, 245, 0.74); }
+  body.has-clip .tabs button[aria-selected="true"] {
+    color: #f7f7f5;
+    border-bottom-color: #f7f7f5;
+  }
+  body.has-clip #profile,
+  body.has-clip #play,
+  body.has-clip .edge-tools button {
+    color: var(--ink);
+    text-shadow: none;
+  }
+  body.has-clip #profile,
+  body.has-clip #play,
+  body.has-clip .edge-tools button {
+    color: var(--ink);
+    text-shadow: none;
   }
   button, input, select { font: inherit; color: inherit; }
   button { background: none; border: 0; padding: 0; cursor: pointer; }
@@ -81,8 +104,8 @@
     pointer-events: none;
     opacity: 0;
     background:
-      linear-gradient(to top, var(--wash) 0%, transparent 30%),
-      linear-gradient(to bottom, var(--wash-top) 0%, transparent 18%);
+      linear-gradient(to top, var(--wash) 0%, transparent 7%),
+      linear-gradient(to bottom, var(--wash-top) 0%, transparent 8%);
     transition: opacity 0.8s ease;
   }
   body.has-clip #atmosphere { opacity: 1; }
@@ -92,23 +115,79 @@
     top: 0;
     left: 0;
     right: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 16px;
-    padding: calc(18px + env(safe-area-inset-top)) 22px 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: calc(14px + env(safe-area-inset-top)) 16px 0;
     pointer-events: none;
     text-shadow: 0 1px 14px var(--wash);
   }
   .top > * { pointer-events: auto; }
+  .top-start, .top-end { display: flex; align-items: center; gap: 12px; min-width: 36px; }
+  .top-end { justify-content: flex-end; }
+  .top-mid { min-width: 0; text-align: center; }
   .mark {
-    font-size: 16px;
+    display: none;
+    font-size: 22px;
     letter-spacing: -0.04em;
     font-weight: 500;
+    line-height: 1;
   }
+  #back, #session-title, #session-date, #screen-heading, #profile, #more { display: none; }
+  #back {
+    font-size: 28px;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  #more {
+    font-size: 18px;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    text-transform: none;
+  }
+  #profile {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--hair);
+    border-radius: 50%;
+    background: var(--frost);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 14px;
+  }
+  #session-title, #screen-heading {
+    margin: 0 auto;
+    max-width: 58vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 17px;
+    letter-spacing: -0.03em;
+    text-transform: none;
+    font-weight: 500;
+  }
+  #session-date { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+  body[data-screen="home"] .mark,
+  body[data-screen="home"] #profile { display: inline-flex; align-items: center; justify-content: center; }
+  body[data-screen="playback"] #back,
+  body[data-screen="analysis"] #back,
+  body[data-screen="plan"] #back,
+  body[data-screen="coach"] #back,
+  body[data-screen="playback"] #more,
+  body[data-screen="analysis"] #more,
+  body[data-screen="plan"] #more { display: inline-flex; align-items: center; justify-content: center; }
+  body[data-screen="playback"] #session-title,
+  body[data-screen="playback"] #session-date,
+  body[data-screen="analysis"] #screen-heading,
+  body[data-screen="plan"] #screen-heading,
+  body[data-screen="coach"] #screen-heading { display: block; }
   #status {
     margin: 0;
-    max-width: 58%;
+    max-width: 34vw;
     text-align: right;
     font-size: 11px;
     letter-spacing: 0.12em;
@@ -117,6 +196,51 @@
     line-height: 1.35;
   }
   #status:empty { display: none; }
+  .more {
+    position: fixed;
+    z-index: 6;
+    top: calc(52px + env(safe-area-inset-top));
+    right: 16px;
+    width: min(240px, calc(100% - 32px));
+    padding: 12px 14px;
+    background: var(--frost);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-radius: 14px;
+  }
+  .more[hidden] { display: none; }
+  .more button, .more a { display: block; margin: 10px 0; font-size: 13px; letter-spacing: 0; text-transform: none; }
+  .tabs {
+    display: none;
+    position: fixed;
+    z-index: 4;
+    top: calc(58px + env(safe-area-inset-top));
+    left: 22px;
+    right: 22px;
+    width: auto;
+    transform: none;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+  }
+  body[data-screen="analysis"] .tabs { display: flex; }
+  .tabs button {
+    padding: 8px 2px 7px;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    font-size: 14px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--muted);
+    background: none;
+  }
+  .tabs button[aria-selected="true"] {
+    color: var(--ink);
+    background: none;
+    border-bottom-color: var(--ink);
+  }
   .screen {
     position: relative;
     z-index: 3;
@@ -124,47 +248,202 @@
     min-height: 100dvh;
     flex-direction: column;
     justify-content: flex-end;
-    padding: calc(68px + env(safe-area-inset-top)) 0 calc(84px + env(safe-area-inset-bottom));
+    padding: calc(60px + env(safe-area-inset-top)) 0 calc(72px + env(safe-area-inset-bottom));
     pointer-events: none;
   }
   .screen.is-on { display: flex; }
-  .pad { padding-left: 22px; padding-right: 22px; }
-  .cluster, .transport, .analysis-copy, .links, #results, .sheet, #read-row {
+  .pad { padding-left: 16px; padding-right: 16px; }
+  .cluster, .transport, .feedback, .frames, .measure, .links, #results, .sheet, #read-row, .more, .tabs, .panel, .home-stack, .home-seg, .edge-tools, .low, .analysis-low, .plan-foot, .plan-scroll {
     pointer-events: auto;
   }
+  #home.is-on, #coach.is-on {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    justify-content: flex-start;
+    overflow: auto;
+  }
+  #role.is-on, #auth.is-on {
+    height: 100dvh;
+    justify-content: flex-end;
+    overflow: auto;
+  }
+  #playback.is-on, #analysis.is-on {
+    position: fixed;
+    inset: 0;
+    min-height: 0;
+    height: 100dvh;
+    justify-content: flex-end;
+    gap: 0;
+    padding: calc(78px + env(safe-area-inset-top)) 16px calc(14px + env(safe-area-inset-bottom));
+    overflow: hidden;
+  }
+  #analysis.is-on {
+    padding-top: calc(104px + env(safe-area-inset-top));
+    overflow: auto;
+  }
+  .home-stack { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: min(100%, 520px); }
+  .home-seg {
+    display: flex;
+    width: 100%;
+    margin: 2px 0 10px;
+    padding: 3px;
+    gap: 2px;
+    background: var(--frost);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 999px;
+  }
+  .home-seg button {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: 999px;
+    font-size: 13px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--muted);
+  }
+  .home-seg button[aria-selected="true"] {
+    color: var(--ink);
+    background: var(--frost-strong);
+  }
+  #greet { margin: 2px 0 0; font-size: 28px; line-height: 1.12; letter-spacing: -0.04em; font-weight: 500; }
   #home-line {
+    margin: 2px 0 6px;
+    max-width: 24em;
+    font-size: 15px;
+    line-height: 1.35;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  #home-line.is-note { color: var(--ink); font-size: 16px; }
+  .panel {
+    width: 100%;
     margin: 0;
-    max-width: 10em;
-    font-size: 34px;
-    line-height: 1.12;
-    letter-spacing: -0.04em;
+    padding: 14px 14px 12px;
+    text-align: left;
+    background: var(--frost-strong);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-radius: 16px;
   }
-  #home-line.is-note {
-    max-width: 22em;
-    font-size: 20px;
-    line-height: 1.4;
-    letter-spacing: -0.02em;
+  button.panel { display: block; }
+  .kicker, .who, .index {
+    display: block;
+    margin: 0 0 8px;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: var(--muted);
   }
+  .card-title, .session-name {
+    display: block;
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.25;
+    letter-spacing: -0.03em;
+  }
+  .quiet { display: block; margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.35; }
+  .session-hit { display: block; width: 100%; text-align: left; }
+  .still-wrap {
+    position: relative;
+    display: block;
+    height: 74px;
+    margin: 0 0 10px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+  #recent-still {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  #recent-still[hidden] { display: none; }
+  .play-badge {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    width: 34px;
+    height: 34px;
+    margin-top: -17px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--frost-strong);
+    color: var(--ink);
+  }
+  .play-badge svg { width: 14px; height: 14px; margin-left: 2px; }
+  .plan-card-head, .plan-goal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .plan-goal { margin: 0; font-size: 18px; letter-spacing: -0.03em; line-height: 1.25; }
+  .chevron { font-size: 22px; line-height: 1; color: var(--muted); }
+  .bar {
+    display: block;
+    height: 3px;
+    margin: 12px 0 8px;
+    background: var(--hair);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--ink);
+    border-radius: 99px;
+  }
+  .coach-hit {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+  }
+  .bubble {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+  .bubble svg { width: 18px; height: 18px; }
+  .coach-copy { min-width: 0; }
+  #coach-card-line {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  #coach-actions { display: flex; flex-direction: column; align-items: flex-start; }
+  #coach-actions:empty { display: none; }
+  .upload-line { display: block; margin-top: 2px; font-size: 16px; letter-spacing: -0.02em; cursor: pointer; }
   #clip-name, .hint, #mode-note, #provenance, #warning {
     color: var(--muted);
     font-size: 13px;
     line-height: 1.45;
   }
-  #clip-name { margin: 10px 0 0; letter-spacing: 0.04em; }
   #clip-name:empty, #warning:empty, #provenance:empty { display: none; }
-  .hint { margin: 14px 0 0; }
+  .hint { margin: 10px 0 0; }
   body.has-clip .hint { display: none; }
-  .text-action, #submit, #session, #another, #toggle-report, .ask button, #play {
+  .text-action, #submit, #session, #another, #toggle-report, .ask button, #read-row button {
     letter-spacing: 0.14em;
     text-transform: uppercase;
     font-size: 12px;
   }
-  .text-action { display: inline-block; margin-top: 22px; cursor: pointer; }
-  #session { display: inline-block; margin: 18px 0 0 18px; color: var(--muted); }
-  #settings { margin-top: 22px; max-width: 36rem; }
+  .text-action { display: inline-block; margin-top: 12px; cursor: pointer; }
+  #session { display: inline-block; margin: 12px 0 0; color: var(--muted); }
+  #settings { margin-top: 8px; max-width: 36rem; }
   #settings[hidden] { display: none; }
   #settings label { display: block; margin: 16px 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-  select, input[type="password"] {
+  select, input[type="password"], input[type="text"] {
     display: block;
     width: 100%;
     margin-top: 8px;
@@ -179,65 +458,198 @@
     color: var(--ink);
   }
   #mode-note { margin: 8px 0 0; text-transform: none; letter-spacing: 0; }
-  #read-row { margin: 18px 0 0; }
+  #read-row { margin: 10px 0 0; }
   body:not(.has-clip) #read-row, body.done #read-row { display: none; }
   #stage-hit {
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
-    height: 48%;
+    bottom: 42%;
     pointer-events: auto;
   }
-  .veil {
+  .edge-tools {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: min(50dvh, 460px);
-    background: linear-gradient(to top, var(--wash) 0%, var(--frost) 42%, transparent 100%);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    -webkit-mask-image: linear-gradient(to top, #000 30%, transparent);
-    mask-image: linear-gradient(to top, #000 30%, transparent);
-    pointer-events: none;
+    z-index: 2;
+    right: 12px;
+    top: calc(112px + env(safe-area-inset-top));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
-  .analysis-copy, .transport, #read-row, #results { position: relative; z-index: 1; }
-  .kicker, .who, .index {
-    margin: 0 0 8px;
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+  .edge-tools button {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--frost);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+  .edge-tools svg { width: 16px; height: 16px; }
+  .low, .analysis-low {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(100%, 520px);
+    margin-top: auto;
+  }
+  .times {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+    letter-spacing: 0.04em;
     color: var(--muted);
+    text-shadow: 0 1px 10px var(--wash);
   }
-  #cue-time:empty { display: none; }
-  #cue {
-    margin: 0;
-    max-width: 20em;
-    font-size: 22px;
-    line-height: 1.25;
-    letter-spacing: -0.03em;
+  .transport-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 28px;
   }
-  #cue-detail {
-    max-width: 38rem;
-    margin: 8px 0 0;
+  .transport-row button {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+  }
+  #play {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--frost);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  #play svg { width: 16px; height: 16px; }
+  #play .icon-pause { display: none; }
+  #play[aria-pressed="true"] .icon-play { display: none; }
+  #play[aria-pressed="true"] .icon-pause { display: block; }
+  .measure {
+    position: absolute;
+    z-index: 2;
+    top: calc(112px + env(safe-area-inset-top));
+    right: 12px;
+    width: min(46vw, 172px);
+    max-height: 34vh;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+    background: none;
+  }
+  .measure[hidden] { display: none; }
+  .m-row {
+    padding: 8px 10px;
+    background: var(--frost-strong);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 12px;
+  }
+  .m-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .m-name, .m-value, .m-note { margin: 0; }
+  .m-name { font-size: 13px; line-height: 1.25; letter-spacing: -0.02em; }
+  .m-value { flex: none; font-size: 12px; color: var(--muted); }
+  .m-note {
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.35;
     color: var(--muted);
-    font-size: 14px;
-    line-height: 1.45;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  #cue-detail:empty { display: none; }
-  .transport { margin-top: 22px; }
-  .transport-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 12px;
+  .feedback {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 520px);
+    padding: 12px 14px;
+    background: var(--frost-strong);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-radius: 16px;
   }
-  #clock { font-size: 12px; letter-spacing: 0.08em; color: var(--muted); }
+  body[data-tab="overview"] #readout,
+  body[data-tab="technique"] #readout { display: none; }
+  #reading {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.3;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  #cue {
+    margin: 6px 0 0;
+    font-size: 15px;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  #notes { list-style: none; margin: 8px 0 0; padding: 0; }
+  #notes:empty { display: none; }
+  #notes li {
+    padding: 7px 0;
+    border-top: 1px solid var(--hair);
+    font-size: 13px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .frames-label {
+    margin: 2px 2px 0;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+    text-shadow: 0 1px 10px var(--wash);
+  }
+  .frames-label:has(+ .frames:empty) { display: none; }
+  .frames {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px;
+    background: var(--frost-strong);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 14px;
+  }
+  .frames:empty { display: none; }
+  .frames button { flex: 0 0 72px; text-align: left; }
+  .frames img {
+    display: block;
+    width: 72px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+  .frames .label {
+    display: block;
+    margin-top: 5px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .frames button[aria-current="true"] .label { color: var(--ink); }
+  #cue-time:empty { display: none; }
   input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
@@ -250,26 +662,47 @@
   }
   input[type="range"]:focus-visible { outline-offset: 4px; }
   input[type="range"]::-webkit-slider-runnable-track {
-    height: 1px;
+    height: 2px;
     background: var(--hair);
+    border-radius: 99px;
   }
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 1px;
+    width: 2px;
     height: 14px;
     margin-top: -6px;
     background: var(--ink);
     border: 0;
   }
-  input[type="range"]::-moz-range-track { height: 1px; background: var(--hair); border: 0; }
+  input[type="range"]::-moz-range-track { height: 2px; background: var(--hair); border: 0; border-radius: 99px; }
   input[type="range"]::-moz-range-thumb {
-    width: 1px;
+    width: 2px;
     height: 14px;
     border: 0;
     border-radius: 0;
     background: var(--ink);
   }
-  #results { margin-top: 18px; }
+  #ai-toggle {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 15px;
+  }
+  #ai-toggle .chev { color: var(--muted); font-size: 18px; line-height: 1; transition: transform 0.2s ease; }
+  #ai-toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
+  #ai-copy {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  #ai-body { width: 100%; }
+  #ai-body p { margin: 8px 0 0; font-size: 14px; line-height: 1.45; }
+  #results { margin-top: 8px; }
   #results[hidden] { display: none; }
   .links { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0; font-size: 13px; }
   #report {
@@ -284,52 +717,138 @@
   }
   #another, #toggle-report { display: inline-block; margin: 12px 16px 0 0; color: var(--muted); }
   .sheet {
-    margin-top: 16vh;
-    margin-bottom: calc(-1 * (84px + env(safe-area-inset-bottom)));
-    padding: 72px 22px calc(108px + env(safe-area-inset-bottom));
+    margin: 0 16px;
+    padding: 16px 16px 8px;
     background: var(--frost-strong);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 72px);
-    mask-image: linear-gradient(to bottom, transparent 0, #000 72px);
-    backdrop-filter: blur(18px) saturate(1.05);
-    -webkit-backdrop-filter: blur(18px) saturate(1.05);
+    border-radius: 16px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
   }
-  body:not(.has-clip) .sheet {
-    margin-top: 8vh;
-    background: transparent;
-    -webkit-mask-image: none;
-    mask-image: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-  .msg { max-width: 38rem; margin: 0 0 22px; }
+  .msg { max-width: 38rem; margin: 0 0 18px; }
   .msg p { margin: 0; font-size: 15px; line-height: 1.5; }
   .msg.user p { color: var(--muted); }
   .ask {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     align-items: center;
     margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--hair);
+    padding-top: 4px;
   }
   .ask input {
     flex: 1;
     min-width: 0;
     border: 0;
-    border-bottom: 1px solid transparent;
+    border-bottom: 1px solid var(--hair);
     border-radius: 0;
     background: transparent;
-    padding: 12px 0;
+    padding: 10px 0;
     font-size: 16px;
   }
   .ask input:focus { outline: none; border-bottom-color: var(--ink); }
   .ask input::placeholder { color: var(--muted); }
-  #plan-list { list-style: none; margin: 12px 0 0; padding: 0; max-width: 38rem; }
-  #plan-list li { padding: 16px 0; border-top: 1px solid var(--hair); }
-  #plan-list .plan-title { margin: 0; font-size: 18px; line-height: 1.3; letter-spacing: -0.02em; }
-  #plan-list .plan-body { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
-  #plan-empty { max-width: 22em; margin: 8px 0 0; font-size: 20px; line-height: 1.35; letter-spacing: -0.02em; }
-  #plan-empty[hidden] { display: none; }
+  #home-thread { max-height: 42vh; overflow: auto; }
+  #plan.is-on {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    justify-content: flex-start;
+    overflow: hidden;
+    padding-top: calc(64px + env(safe-area-inset-top));
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .plan-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 16px;
+  }
+  .plan-tabs {
+    display: flex;
+    gap: 22px;
+    margin: 16px 2px 4px;
+  }
+  .plan-tabs button {
+    padding: 6px 0 8px;
+    border-bottom: 2px solid transparent;
+    font-size: 15px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--muted);
+  }
+  .plan-tabs button[aria-selected="true"] {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+  #plan-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 4px 12px;
+    background: var(--frost-strong);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-radius: 16px;
+  }
+  .check-row {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+    padding: 14px 0;
+    border-top: 1px solid var(--hair);
+  }
+  .check {
+    width: 22px;
+    height: 22px;
+    margin-top: 1px;
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    line-height: 1;
+  }
+  .check[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--field);
+  }
+  .check.is-next { box-shadow: inset 0 0 0 6px var(--ink); background: transparent; }
+  .plan-title { margin: 0; font-size: 16px; line-height: 1.3; letter-spacing: -0.02em; }
+  .plan-body {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  #plan-empty { display: none; }
+  .plan-foot { flex: none; padding: 8px 16px 0; }
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .split-col { display: block; min-width: 0; text-align: left; }
+  .split-label { display: block; margin: 0 0 4px; font-size: 14px; letter-spacing: -0.02em; }
+  .mini-avatar {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 6px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--hair);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    font-size: 12px;
+  }
+  .split-col .quiet {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
   nav {
     position: fixed;
     z-index: 5;
@@ -339,50 +858,225 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 4px;
-    padding: 22px 10px calc(12px + env(safe-area-inset-bottom));
-    background: var(--nav);
-    -webkit-mask-image: linear-gradient(to top, #000 72%, transparent);
-    mask-image: linear-gradient(to top, #000 72%, transparent);
+    padding: 10px 8px calc(8px + env(safe-area-inset-bottom));
+    background: var(--frost-strong);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     text-shadow: 0 1px 12px var(--wash);
   }
+  body[data-screen="playback"] nav,
+  body[data-screen="analysis"] nav,
+  body[data-screen="plan"] nav,
+  body[data-screen="role"] nav,
+  body[data-screen="auth"] nav { display: none; }
   nav button {
-    font-size: 11px;
-    letter-spacing: 0.16em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--muted);
-    padding: 8px 0;
+    padding: 4px 0;
   }
+  nav button svg { width: 18px; height: 18px; }
   nav button[aria-current="page"] { color: var(--ink); }
   @media (min-width: 840px) {
     .top { padding-left: 48px; padding-right: 48px; }
-    .pad, .sheet { padding-left: 48px; padding-right: 48px; }
+    .pad, .sheet, .plan-scroll, .plan-foot { padding-left: 48px; padding-right: 48px; }
     nav { padding-left: 36px; padding-right: 36px; }
   }
+  .top, main, nav, .tabs, #more-panel, #video, #atmosphere {
+    transition: opacity 0.7s ease;
+  }
+  html.is-still .top,
+  html.is-still main,
+  html.is-still nav,
+  html.is-still .tabs,
+  html.is-still #more-panel,
+  html.is-gate .top,
+  html.is-gate nav,
+  html.is-gate .tabs,
+  html.is-gate #more-panel {
+    opacity: 0;
+    pointer-events: none;
+  }
+  html.is-still #video,
+  html.is-still #atmosphere,
+  html.is-gate #video,
+  html.is-gate #atmosphere,
+  html.is-still body.has-clip #video,
+  html.is-gate body.has-clip #video {
+    opacity: 0;
+  }
+  .gate-line {
+    margin: 0 0 8px;
+    max-width: 11em;
+    font-size: 34px;
+    line-height: 1.12;
+    letter-spacing: -0.04em;
+  }
+  #role .text-action, #auth .text-action { display: block; margin-top: 18px; }
+  .gate label {
+    display: block;
+    margin: 18px 0 0;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  #role-switches { display: flex; gap: 16px; margin: 8px 0 14px; }
+  #role-switches button[aria-current="true"] { color: var(--ink); }
+  #role-switches button { color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; font-size: 12px; }
+  #add-role, #logout { letter-spacing: 0.14em; text-transform: uppercase; font-size: 12px; }
+  #people { margin-bottom: 22px; }
+  #people-list { list-style: none; margin: 0; padding: 0; }
+  #people-list li { padding: 8px 0; border-top: 1px solid var(--hair); font-size: 15px; }
+  #people-empty { margin: 0 0 8px; font-size: 15px; }
+  #people-empty[hidden] { display: none; }
   @media (prefers-reduced-motion: reduce) {
-    body, #video, #atmosphere { transition: none; }
+    body, #video, #atmosphere, .top, main, nav, .tabs, #more-panel, #ai-toggle .chev { transition: none; }
   }
 </style>
+<script>document.documentElement.classList.add('is-still');</script>
 <video id="video" playsinline muted loop preload="metadata"></video>
 <div id="atmosphere" aria-hidden="true"></div>
 <header class="top">
-  <button class="mark" type="button" data-go="home">with.</button>
-  <p id="status" role="status" aria-live="polite"></p>
+  <div class="top-start">
+    <button id="back" type="button" aria-label="Back">‹</button>
+    <button class="mark" type="button" data-go="home">with.</button>
+  </div>
+  <div class="top-mid">
+    <p id="session-title">Spin</p>
+    <p id="session-date"></p>
+    <p id="screen-heading"></p>
+  </div>
+  <div class="top-end">
+    <p id="status" role="status" aria-live="polite"></p>
+    <button id="profile" type="button" aria-label="Profile"></button>
+    <button id="more" type="button" aria-expanded="false" aria-controls="more-panel" aria-label="More">···</button>
+  </div>
 </header>
+<div id="more-panel" class="more" hidden>
+  <button id="more-setup" type="button">Setup</button>
+  <button id="another" type="button">Replace footage</button>
+  <section id="results" hidden>
+    <p id="provenance"></p>
+    <p id="warning"></p>
+    <p class="links">
+      <a id="download-video">Annotated video</a>
+      <a id="download-report">Report</a>
+      <a id="download-data">Measurements</a>
+    </p>
+    <button id="toggle-report" type="button">Full note</button>
+    <pre id="report" hidden></pre>
+  </section>
+</div>
+<div class="tabs" role="tablist" aria-label="Analysis">
+  <button type="button" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+  <button type="button" role="tab" data-tab="technique" aria-selected="false">Technique</button>
+  <button type="button" role="tab" data-tab="comparison" aria-selected="false">Comparison</button>
+</div>
 <main>
-  <section id="home" class="screen is-on" data-screen="home">
+  <section id="role" class="screen" data-screen="role">
     <div class="pad cluster">
-      <p id="home-line">Watch the work.</p>
-      <p id="clip-name"></p>
-      <form id="upload-form">
-        <label class="text-action">
+      <p class="gate-line">Are you a skater or a coach?</p>
+      <button class="text-action" type="button" data-role="skater">I'm a skater</button>
+      <button class="text-action" type="button" data-role="coach">I'm a coach</button>
+    </div>
+  </section>
+  <section id="auth" class="screen" data-screen="auth">
+    <div class="pad cluster gate">
+      <p id="auth-line" class="gate-line">Create an account</p>
+      <form id="auth-form">
+        <label>Name
+          <input id="auth-name" type="text" autocomplete="name" required>
+        </label>
+        <label>Passphrase
+          <input id="auth-pass" type="password" autocomplete="current-password" required>
+        </label>
+        <p id="auth-error" class="hint"></p>
+        <button id="auth-submit" class="text-action" type="submit">Create account</button>
+      </form>
+      <button id="auth-switch" class="text-action" type="button">Log in</button>
+      <p class="hint">Kept on this device.</p>
+    </div>
+  </section>
+  <section id="home" class="screen is-on" data-screen="home">
+    <div class="pad home-stack">
+      <div class="home-seg" role="tablist" aria-label="Home">
+        <button type="button" data-home-tab="foryou" aria-selected="true">For You</button>
+        <button type="button" data-home-tab="library" aria-selected="false">Library</button>
+        <button type="button" data-home-tab="coach" aria-selected="false">Coach</button>
+        <button type="button" data-home-tab="chat" aria-selected="false">Chat</button>
+      </div>
+      <p id="greet" data-pane="foryou"></p>
+      <p id="home-line" data-pane="foryou">for coaches and skaters.</p>
+      <p id="clip-name" class="sr"></p>
+      <article id="recent" class="panel" data-pane="foryou library" hidden>
+        <p class="kicker">Recent Session</p>
+        <button id="open-session" type="button" class="session-hit">
+          <span class="still-wrap">
+            <img id="recent-still" alt="" hidden>
+            <span class="play-badge" aria-hidden="true">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L13 8 5 3.2z" fill="currentColor"/></svg>
+            </span>
+          </span>
+          <span id="recent-name" class="session-name"></span>
+          <span id="recent-meta" class="quiet"></span>
+        </button>
+        <button id="review-feedback" class="text-action" type="button" data-home="feedback">Review feedback</button>
+      </article>
+      <div id="library-empty" class="panel" data-pane="library" hidden>
+        <p class="kicker">Library</p>
+        <p class="session-name">No clips yet.</p>
+        <p class="quiet">A clip you add shows up here.</p>
+      </div>
+      <button id="plan-card" class="panel plan-card" type="button" data-pane="foryou" data-home="plan">
+        <span class="kicker">Training Plan</span>
+        <span class="plan-card-head">
+          <span id="plan-card-title" class="plan-goal"></span>
+          <span class="chevron" aria-hidden="true">›</span>
+        </span>
+        <span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="plan-card-fill"></span></span>
+        <span id="plan-card-progress" class="quiet"></span>
+        <span id="plan-card-action" class="quiet"></span>
+      </button>
+      <div id="coach-card" class="panel" data-pane="foryou coach">
+        <button id="coach-hit" class="coach-hit" type="button" data-home="connect">
+          <span class="bubble" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 16.5 4.5 19.5c2.2-1 4-1.4 5.5-1.5"/><path d="M7 16.2A6.5 6.5 0 1 1 12.2 18H8.2L7 16.2z"/></svg>
+          </span>
+          <span class="coach-copy">
+            <span id="coach-card-kicker" class="card-title">Chat with Coach</span>
+            <span id="coach-card-line" class="quiet"></span>
+          </span>
+        </button>
+        <div id="coach-actions"></div>
+      </div>
+      <section id="home-chat" class="panel" data-pane="chat" hidden>
+        <p class="kicker">Chat</p>
+        <div id="home-thread"></div>
+        <form id="home-chat-form" class="ask">
+          <label class="sr" for="home-chat-input">Message your coach</label>
+          <input id="home-chat-input" type="text" placeholder="Message your coach" enterkeyhint="send" autocomplete="off">
+          <button type="submit">Send</button>
+        </form>
+      </section>
+      <form id="upload-form" class="panel upload-card" data-pane="foryou">
+        <p class="kicker">Quick Upload</p>
+        <label class="upload-line">
           <span id="pick">Add footage</span>
           <input id="file" class="sr" name="video" type="file" accept="video/*,.mov,.m4v,.avi" required>
         </label>
         <button id="session" type="button">Setup</button>
         <p id="home-hint" class="hint">A clip of 30 seconds or less.</p>
         <div id="settings" hidden>
+          <p class="kicker">Role</p>
+          <div id="role-switches"></div>
+          <button id="add-role" type="button">Add the other role</button>
+          <button id="logout" type="button">Log out</button>
           <label>Processing
             <select name="mode" id="mode">
               <option value="nvidia">Coach with NVIDIA</option>
@@ -401,39 +1095,76 @@
       </form>
     </div>
   </section>
-  <section id="analysis" class="screen" data-screen="analysis">
+  <section id="playback" class="screen" data-screen="playback">
     <button id="stage-hit" type="button" tabindex="-1" aria-hidden="true"></button>
-    <div class="veil" aria-hidden="true"></div>
-    <div class="pad analysis-copy">
-      <p id="cue-time" class="kicker"></p>
-      <p id="cue">Footage will fill this screen.</p>
-      <p id="cue-detail"></p>
+    <div class="edge-tools">
+      <button id="tool-analysis" type="button" aria-label="Analysis">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="5" r="2.1"/><path d="M8 21.5v-5.2L6.2 12.2A2 2 0 0 1 8 9.2h8a2 2 0 0 1 1.8 3L16 16.3v5.2"/><path d="M9 13.5h6"/></svg>
+      </button>
+      <button id="tool-next" type="button" aria-label="Next key frame">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 6.5v11l8-5.5-8-5.5z"/></svg>
+      </button>
+      <button id="tool-speed" type="button" aria-label="Playback speed">1×</button>
     </div>
-    <div class="pad transport">
-      <div class="transport-row">
-        <button id="play" type="button" aria-pressed="false">Play</button>
+    <div class="low">
+      <div class="times">
         <span id="clock">0:00</span>
+        <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Position in the clip" disabled>
+        <span id="duration">0:00</span>
       </div>
-      <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Position in the clip" disabled>
+      <div class="transport-row">
+        <button id="step-back" type="button" aria-label="Frame back">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M11 7v10L5 12l6-5z"/><path d="M18 7v10l-6-5 6-5z"/></svg>
+        </button>
+        <button id="play" type="button" aria-pressed="false" aria-label="Play">
+          <span class="icon-play"><svg viewBox="0 0 16 16"><path d="M5 3.2v9.6L13 8 5 3.2z" fill="currentColor"/></svg></span>
+          <span class="icon-pause"><svg viewBox="0 0 16 16"><path d="M4.5 3h2.2v10H4.5V3zm4.8 0H11.5v10H9.3V3z" fill="currentColor"/></svg></span>
+        </button>
+        <button id="step-forward" type="button" aria-label="Frame forward">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 7v10l6-5-6-5z"/><path d="M6 7v10l6-5-6-5z"/></svg>
+        </button>
+      </div>
+      <div id="frames" class="frames" aria-label="Key frames"></div>
     </div>
-    <div class="pad" id="read-row">
-      <button id="submit" type="submit" form="upload-form">Read this clip</button>
+  </section>
+  <section id="analysis" class="screen" data-screen="analysis">
+    <aside id="measure" class="measure" hidden>
+      <div id="measure-body"></div>
+    </aside>
+    <div class="analysis-low">
+      <section id="readout" class="feedback" aria-label="Key feedback">
+        <p id="cue-time" class="kicker">Overview</p>
+        <p id="reading">Unread</p>
+        <p id="cue">Footage will fill this screen.</p>
+        <ul id="notes"></ul>
+      </section>
+      <p id="frames-label" class="frames-label">Key Frames</p>
+      <div id="analysis-frames" class="frames" aria-label="Key frames"></div>
+      <section id="ai-panel" class="feedback">
+        <button id="ai-toggle" type="button" aria-expanded="false" aria-controls="ai-body">
+          <span>AI Feedback</span>
+          <span class="chev" aria-hidden="true">›</span>
+        </button>
+        <p id="ai-copy" class="quiet">Read the clip to open a note.</p>
+        <div id="ai-body" hidden></div>
+        <div id="read-row">
+          <button id="submit" type="submit" form="upload-form">Read this clip</button>
+        </div>
+      </section>
     </div>
-    <section id="results" class="pad" hidden>
-      <p id="provenance"></p>
-      <p id="warning"></p>
-      <p class="links">
-        <a id="download-video">Annotated video</a>
-        <a id="download-report">Report</a>
-        <a id="download-data">Measurements</a>
-      </p>
-      <button id="toggle-report" type="button">Full note</button>
-      <button id="another" type="button">Replace footage</button>
-      <pre id="report" hidden></pre>
-    </section>
   </section>
   <section id="coach" class="screen" data-screen="coach">
     <div class="sheet">
+      <div id="people">
+        <p id="people-kicker" class="kicker">Coach</p>
+        <p id="people-empty">No coach connected.</p>
+        <ul id="people-list"></ul>
+        <form id="people-form" class="ask">
+          <label class="sr" for="people-name">Name</label>
+          <input id="people-name" type="text" placeholder="Coach name" autocomplete="off">
+          <button type="submit">Add</button>
+        </form>
+      </div>
       <div id="thread"></div>
       <form id="chat-form" class="ask">
         <label class="sr" for="chat-input">Ask about this clip</label>
@@ -443,18 +1174,59 @@
     </div>
   </section>
   <section id="plan" class="screen" data-screen="plan">
-    <div class="sheet">
-      <p class="kicker">Training plan</p>
+    <div class="plan-scroll">
+      <div class="panel">
+        <p id="plan-goal" class="plan-goal"></p>
+        <p id="plan-week" class="quiet"></p>
+        <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="plan-fill"></span></div>
+        <p id="plan-progress" class="quiet"></p>
+      </div>
+      <div class="plan-tabs" role="tablist" aria-label="Training plan">
+        <button type="button" data-plan-tab="plan" aria-selected="true">Plan</button>
+        <button type="button" data-plan-tab="exercises" aria-selected="false">Exercises</button>
+      </div>
       <p id="plan-empty">The plan is written from the clip.</p>
       <ol id="plan-list"></ol>
+    </div>
+    <div class="plan-foot">
+      <div class="panel">
+        <div class="split">
+          <button type="button" class="split-col" data-go="coach">
+            <span class="mini-avatar" id="plan-coach-avatar"></span>
+            <span class="split-label">Coach</span>
+            <span id="plan-coach-line" class="quiet"></span>
+          </button>
+          <button type="button" class="split-col" data-go="analysis">
+            <span class="split-label">AI Assistant</span>
+            <span id="plan-ai-line" class="quiet"></span>
+          </button>
+        </div>
+        <form id="plan-chat-form" class="ask">
+          <label class="sr" for="plan-chat-input">Message your coach</label>
+          <input id="plan-chat-input" type="text" placeholder="Message your coach" enterkeyhint="send" autocomplete="off">
+          <button type="submit">Send</button>
+        </form>
+      </div>
     </div>
   </section>
 </main>
 <nav>
-  <button type="button" data-go="home" aria-current="page">Home</button>
-  <button type="button" data-go="analysis">Analysis</button>
-  <button type="button" data-go="coach">Coach</button>
-  <button type="button" data-go="plan">Plan</button>
+  <button type="button" data-go="home" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11.2 12 4l8 7.2V20a1 1 0 0 1-1 1h-5.2v-6.2H10.2V21H5a1 1 0 0 1-1-1v-8.8z"/></svg>
+    <span>Home</span>
+  </button>
+  <button type="button" data-go="analysis">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 19V10M12 19V5M19 19v-7"/></svg>
+    <span>Analysis</span>
+  </button>
+  <button type="button" data-go="coach">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3"/><path d="M5.5 19.2c1.2-3 3.4-4.4 6.5-4.4s5.3 1.4 6.5 4.4"/></svg>
+    <span>Coach</span>
+  </button>
+  <button type="button" data-go="plan">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 4.5h8M8 4.5A2.5 2.5 0 0 0 5.5 7v11A2.5 2.5 0 0 0 8 20.5h8a2.5 2.5 0 0 0 2.5-2.5V7A2.5 2.5 0 0 0 16 4.5"/><path d="M8.5 12h7M8.5 16h4.5"/></svg>
+    <span>Plan</span>
+  </button>
 </nav>
 <script src="/static/upload.js" defer></script>
 </html>
