@@ -19,6 +19,8 @@ for (const key of ['SPECTRUM_PROJECT_ID', 'SPECTRUM_PROJECT_SECRET', 'PHOTON_PHO
 const number = canonicalHandle(process.env.PHOTON_PHONE_NUMBER)
 const student = canonicalHandle(process.env.PHOTON_ALLOWED_SENDER)
 const agentId = `spectrum:${number}`
+const ignoreBefore = process.env.PHOTON_IGNORE_BEFORE ? Date.parse(process.env.PHOTON_IGNORE_BEFORE) : 0
+if (!Number.isFinite(ignoreBefore)) throw new Error('PHOTON_IGNORE_BEFORE must be an ISO timestamp')
 const credentials = [process.env.SPECTRUM_PROJECT_ID, process.env.SPECTRUM_PROJECT_SECRET]
 const status = { ready: false, connection: 'spectrum', channel: 'imessage', number, agentId,
   groupAccess: 'current members', reason: 'Connecting dedicated line',
@@ -161,7 +163,7 @@ async function connect() {
   const messagingApi = process.env.MESSAGING_AGENT_API_URL
     ? createMessagingAgentApi({ baseUrl: process.env.MESSAGING_AGENT_API_URL }) : null
   status.videoBackend = messagingApi ? { type: 'messaging-agent-api', origin: messagingApi.origin } : { type: 'local-backend', port: 8001 }
-  videoHandler ||= (messagingApi ? createMessagingAgentHandler : createIncomingVideoHandler)({ student, agentId, memory: athleteMemory,
+  videoHandler ||= (messagingApi ? createMessagingAgentHandler : createIncomingVideoHandler)({ student, agentId, memory: athleteMemory, ignoreBefore,
     ...(messagingApi ? { api: messagingApi, saveReport: saveMessagingAnalysis,
       programType: process.env.MESSAGING_AGENT_PROGRAM_TYPE || 'unk',
       perceptronTrack: process.env.MESSAGING_AGENT_PERCEPTRON_TRACK !== 'false' } : {}),
@@ -201,7 +203,7 @@ async function connect() {
   // The SDK reconnects its gRPC stream and catches up after interruptions.
   // Failed message work retries the saved outbox body before advancing locally.
   for await (const [space, message] of app.messages) {
-    const incoming = normalizeSpectrumMessage(imessage(space), message, number, agentId)
+    const incoming = normalizeSpectrumMessage(imessage(space), message, number, agentId, ignoreBefore)
     if (!incoming) continue
     status.lastReceivedAt = new Date().toISOString()
     while (running) {

@@ -13,14 +13,14 @@ export function stableId(value) {
   return createHash('sha256').update(value).digest('hex')
 }
 
-export function normalizeSpectrumMessage(space, message, number, agentId) {
+export function normalizeSpectrumMessage(space, message, number, agentId, ignoreBefore = 0) {
   if (message.platform !== 'imessage' || message.direction !== 'inbound' ||
       canonicalHandle(space.phone) !== number || !['text', 'attachment', 'group', 'reply'].includes(message.content?.type) ||
       !['dm', 'group'].includes(space.type) || !message.id || !space.id) return null
   const handle = canonicalHandle(message.sender?.address || message.sender?.id)
   if (!handle || handle === number) return null
   const timestamp = new Date(message.timestamp)
-  if (!Number.isFinite(timestamp.getTime())) return null
+  if (!Number.isFinite(timestamp.getTime()) || timestamp.getTime() <= ignoreBefore) return null
   const nativeId = /^p:\d+\/(.+)$/.exec(message.id)?.[1] || message.id
   const texts = content => {
     if (content?.type === 'text') return content.text || ''

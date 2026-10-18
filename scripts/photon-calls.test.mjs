@@ -32,7 +32,10 @@ test('SIP setup uses stable Photon TLS, compatible RTP, and system-supplied iden
   const payloads = callSetupPayloads(env, 'https://voice.example.com', token)
   assert.equal(payloads.phone.outbound_trunk_config.address, 'sip.spectrum.photon.codes:5061')
   assert.equal(payloads.phone.outbound_trunk_config.transport, 'tls')
-  assert.equal(payloads.agent.conversation_config.tts.model_id, 'eleven_flash_v2')
+  assert.equal(payloads.agent.conversation_config.tts.model_id, 'eleven_v4_turbo')
+  assert.equal(callSetupPayloads({ ...env, ELEVENLABS_CALL_VOICE_ID: 'call-voice', ELEVENLABS_MEMO_VOICE_ID: 'memo-voice', ELEVENLABS_VOICE_ID: 'shared-voice' }, 'https://voice.example.com', token).agent.conversation_config.tts.voice_id, 'call-voice')
+  assert.equal(callSetupPayloads({ ...env, ELEVENLABS_VOICE_ID: 'shared-voice' }, 'https://voice.example.com', token).agent.conversation_config.tts.voice_id, 'shared-voice')
+  assert.equal(callSetupPayloads({ ...env, ELEVENLABS_CALL_MODEL_ID: 'eleven_flash_v2' }, 'https://voice.example.com', token).agent.conversation_config.tts.model_id, 'eleven_flash_v2')
   assert.equal(payloads.phone.outbound_trunk_config.media_encryption, 'disabled')
   assert.deepEqual(payloads.phone.inbound_trunk_config.allowed_numbers, [env.PHOTON_ALLOWED_SENDER])
   const properties = payloads.tool.tool_config.api_schema.request_body_schema.properties

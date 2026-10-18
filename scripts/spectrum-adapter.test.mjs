@@ -56,3 +56,11 @@ test('video and caption events use the canonical parent ID for deduplication', (
   ] } }, number, agentId)
   assert.equal(combined.content.text, 'Review my landing')
 })
+
+
+test('reset cutoff ignores old and replayed messages while allowing new messages', () => {
+  const cutoff = message.timestamp.getTime()
+  assert.equal(normalizeSpectrumMessage(space, message, number, agentId, cutoff), null)
+  assert.equal(normalizeSpectrumMessage(space, { ...message, timestamp: new Date(cutoff - 1000) }, number, agentId, cutoff), null)
+  assert.ok(normalizeSpectrumMessage(space, { ...message, timestamp: new Date(cutoff + 1) }, number, agentId, cutoff))
+})

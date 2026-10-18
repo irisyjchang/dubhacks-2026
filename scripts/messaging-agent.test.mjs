@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, readdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createMessagingAgentApi, createMessagingAgentHandler, moveRequest, agentErrorMessage } from './messaging-agent.mjs'
@@ -24,13 +24,13 @@ async function fixture(overrides = {}) {
     api: {
       analyze: async form => { analyses.push(form); return { analysis_id: `analysis-${analyses.length}`, message: overview } },
       move: async body => { moves.push(body); return { analysis_id: body.analysis_id, message: 'Detailed move feedback.\nKeep a soft reach.',
-        video_url: 'https://api.example/files/move.mp4', skeleton_video_url: 'https://api.example/files/skeleton.mp4' } },
+        video_url: 'https://api.example/files/move.mp4' } },
       video: async () => new Uint8Array([4,5,6]),
     }, ...overrides }
   return { options, sent, reports, analyses, moves, uploaded, cleanup: () => rm(directory, { recursive: true, force: true }) }
 }
 
-test('analyze preserves the API message and move follow-ups return both videos in order', async () => {
+test('analyze preserves the API message and move follow-ups return the normal view and offer skeleton', async () => {
   const f = await fixture()
   try {
     const handler = createMessagingAgentHandler(f.options)
@@ -44,11 +44,11 @@ test('analyze preserves the API message and move follow-ups return both videos i
     assert.equal(f.analyses[0].get('video').name, 'program.mov')
     assert.equal(await handler.handle(message('pick', 'tell me about the third one')), true)
     await handler.drain()
-    assert.deepEqual(f.moves, [{ analysis_id: 'analysis-1', move: 'tell me about the 3 one', skeleton: true }])
-    assert.deepEqual(f.sent.slice(3).map(item => item.body.content.type), ['text', 'attachment', 'attachment'])
+    assert.deepEqual(f.moves, [{ analysis_id: 'analysis-1', move: 'tell me about the 3 one', view: 'normal' }])
+    assert.deepEqual(f.sent.slice(3).map(item => item.body.content.type), ['text', 'attachment', 'text'])
     assert.equal(f.sent[3].body.content.text, 'Detailed move feedback.\nKeep a soft reach.')
     assert.equal(f.uploaded[0].fileName, 'move.mp4')
-    assert.equal(f.uploaded[1].fileName, 'move_skeleton.mp4')
+    assert.match(f.sent.at(-1).body.content.text, /skeleton/)
     const restarted = createMessagingAgentHandler(f.options)
     await restarted.handle(message('pick', 'tell me about the third one')); await restarted.drain()
     assert.equal(f.moves.length, 1, 'event replay must not re-request a move or resend videos')
@@ -88,8 +88,8 @@ test('delivery retries resume saved results and video GUIDs without re-analysis 
     await h.resume(); await h.drain()
     assert.equal(f.analyses.length, 1)
     assert.equal(f.moves.length, 1)
-    assert.equal(f.uploaded.length, 2, 'first uploaded GUID is reused; only second video needs uploading')
-    assert.equal(f.sent.filter(s => s.body.content.type === 'attachment').length, 2)
+    assert.equal(f.uploaded.length, 1, 'uploaded GUID is reused after failed delivery')
+    assert.equal(f.sent.filter(s => s.body.content.type === 'attachment').length, 1)
   } finally { await f.cleanup() }
 })
 
@@ -164,7 +164,7 @@ test('API errors are actionable and no-move responses never offer move details',
   } finally { await f.cleanup() }
 })
 
-test('HTTP API retries transient failures once and gives long analyses a 20-minute timeout', async () => {
+test('HTTP API retries transient failures once and restricts media to its configured origin', async () => {
   const calls = []
   const api = createMessagingAgentApi({ baseUrl: 'https://api.example', sleep: async () => {},
     fetchImpl: async (url, request) => {
@@ -190,4 +190,107 @@ test('HTTP client does not retry invalid move requests and never sends raw error
   assert.equal(moveRequest('move #3'), 'move #3')
   assert.equal(moveRequest('tell me about the third one'), 'tell me about the 3 one')
   assert.equal(moveRequest('UNMUTE AI'), null)
+})
+
+
+test('skeleton requests use the latest move in this chat and can switch back to normal', async () => {
+  const f = await fixture()
+  try {
+    const h = createMessagingAgentHandler(f.options)
+    await h.handle(message('upload'), [video]); await h.drain()
+    await h.handle(message('pick', 'skeleton move 3')); await h.drain()
+    assert.deepEqual(f.moves[0], { analysis_id: 'analysis-1', move: 'skeleton move 3', view: 'skeleton' })
+    assert.equal(f.uploaded[0].fileName, 'move_skeleton.mp4')
+    await h.handle(message('normal', 'normal')); await h.drain()
+    assert.equal(f.moves[1].view, 'normal')
+    assert.equal(f.moves[1].move, 'skeleton move 3')
+    assert.equal(f.uploaded[1].fileName, 'move.mp4')
+    await h.handle(message('skeleton-again', 'skeleton')); await h.drain()
+    assert.equal(f.moves[2].view, 'skeleton')
+    await h.handle(message('new-upload'), [video]); await h.drain()
+    await h.handle(message('missing-number', 'skeleton')); await h.drain()
+    assert.match(f.sent.at(-1).body.content.text, /Which move number/)
+    assert.equal(f.moves.length, 3)
+  } finally { await f.cleanup() }
+})
+
+test('202 analysis jobs poll until complete without reposting the video', async () => {
+  const calls = [], waits = [], pending = []
+  const responses = [json({analysis_id: 'job-1', status: 'processing', retry_after_s: 15}, 202),
+    json({analysis_id: 'job-1', status: 'processing', retry_after_s: 15}, 202),
+    json({analysis_id: 'job-1', status: 'done', message: overview})]
+  const api = createMessagingAgentApi({ baseUrl: 'https://api.example', sleep: async ms => waits.push(ms),
+    fetchImpl: async (url, request) => { calls.push({url, method: request.method}); return responses.shift() } })
+  const result = await api.analyze(new FormData(), 'event', {onPending: async data => pending.push(data.analysis_id)})
+  assert.equal(result.message, overview)
+  assert.deepEqual(calls, [
+    {url: 'https://api.example/agent/analyze', method: 'POST'},
+    {url: 'https://api.example/agent/analysis/job-1', method: 'GET'},
+    {url: 'https://api.example/agent/analysis/job-1', method: 'GET'},
+  ])
+  assert.deepEqual(waits, [15000, 15000])
+  assert.deepEqual(pending, ['job-1', 'job-1'])
+  await assert.rejects(api.analysis('job-1', 'event', {deadline: Date.now() - 1}), error => error.status === 408)
+})
+
+test('polling reports processing failure without forwarding server logs', async () => {
+  const api = createMessagingAgentApi({baseUrl: 'https://api.example', sleep: async () => {},
+    fetchImpl: async () => json({analysis_id: 'job', status: 'failed', error: 'private', log: 'secret'}, 422)})
+  await assert.rejects(api.analysis('job', 'event'), error => {
+    assert.equal(agentErrorMessage(error), 'I couldn’t read that video. Can you try another clip?')
+    return true
+  })
+})
+
+test('restart resumes the saved processing ID without downloading or posting the video again', async () => {
+  const f = await fixture()
+  try {
+    let persisted
+    const saved = new Promise(resolve => { persisted = resolve })
+    f.options.api.analyze = async (_form, _key, options) => {
+      await options.onPending({analysis_id: 'in-progress', status: 'processing'})
+      persisted()
+      return new Promise(() => {}) // Simulate the first process disappearing while polling.
+    }
+    const first = createMessagingAgentHandler(f.options)
+    await first.handle(message('upload'), [video]); await saved
+    const names = await readdir(join(f.options.directory, 'events'))
+    const state = JSON.parse(await readFile(join(f.options.directory, 'events', names[0]), 'utf8'))
+    assert.equal(state.processingId, 'in-progress')
+    assert.ok(state.analysisDeadline > Date.now())
+    f.options.download = async function* () { assert.fail('must not download again') }
+    f.options.api.analyze = async () => assert.fail('must not repost')
+    f.options.api.analysis = async id => { assert.equal(id, 'in-progress'); return {analysis_id: id, message: overview} }
+    const restarted = createMessagingAgentHandler(f.options)
+    await restarted.resume(); await restarted.drain()
+    assert.equal(f.reports[0].analysisId, 'in-progress')
+    assert.equal(f.sent.at(-1).body.content.text, overview)
+  } finally { await f.cleanup() }
+})
+
+
+test('hard reset ignores pre-cutoff messages and retires old jobs during queue recovery', async () => {
+  const f = await fixture()
+  try {
+    let persist
+    const saved = new Promise(resolve => { persist = resolve })
+    f.options.api.analyze = async (_form, _key, options) => {
+      await options.onPending({analysis_id: 'old-job', status: 'processing'})
+      persist()
+      return new Promise(() => {})
+    }
+    const h = createMessagingAgentHandler(f.options)
+    const old = message('old-upload')
+    await h.handle(old, [video]); await saved
+    f.options.ignoreBefore = Date.parse(old.createdAt) + 1
+    f.options.api.analysis = async () => assert.fail('must not poll old jobs')
+    const reset = createMessagingAgentHandler(f.options)
+    await reset.resume(); await reset.drain()
+    assert.equal(f.sent.length, 1)
+    assert.equal(await reset.handle(old, [video]), true)
+    const names = await readdir(join(f.options.directory, 'events'))
+    const state = JSON.parse(await readFile(join(f.options.directory, 'events', names[0]), 'utf8'))
+    assert.equal(state.done, true)
+    assert.ok(state.ignoredBefore)
+  } finally { await f.cleanup() }
 })

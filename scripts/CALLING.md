@@ -118,3 +118,7 @@ The API payloads are based on these published contracts. Local tests mock the
 voice provider. Remote provisioning, metadata propagation through Spectrum SIP,
 and actual two-way audio still need verification after provider permissions and
 SIP routing are configured. Only webhook mode needs a public HTTPS endpoint.
+
+Voice calls default to ElevenLabs v4 Turbo (`ELEVENLABS_CALL_MODEL_ID=eleven_v4_turbo`). Voice notes default to v4 (`ELEVENLABS_MODEL_ID=eleven_v4`) using the Text to Dialogue endpoint. Both models can be overridden in `.env`.
+
+Set `ELEVENLABS_CALL_VOICE_ID` for calls and `ELEVENLABS_MEMO_VOICE_ID` for iMessage voice notes. Each falls back to `ELEVENLABS_VOICE_ID`, then George, when unset. The example configuration uses Shlok (Indian-accented English) for calls and Yu (Chinese-accented English) for voice notes. Add these shared voices to your ElevenLabs library before using their IDs. Restart the Photon listener after changing these settings; existing cached voice notes keep their original audio on retry.

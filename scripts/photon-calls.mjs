@@ -75,7 +75,7 @@ export function callSetupPayloads(env, publicUrl, token) {
       agent: { first_message: 'Hi, I’m your AI skating coach. What would you like to work on?', language: 'en',
         prompt: { prompt: 'You are the voice of the existing skating coach. Before answering any substantive question or saving a goal or practice update, call ask_skating_coach. Speak the returned reply naturally and briefly, retaining its evidence and uncertainty. Never invent video observations, past conversations, or saved actions. For small talk, keep it brief. If the tool refuses access or fails, say you cannot access coaching feedback right now; do not guess. Do not claim to place calls, send texts, or change settings. The caller can continue the coaching conversation in iMessage after hanging up.',
           llm: 'gpt-4.1-mini', timezone: 'America/Los_Angeles' } },
-      tts: { voice_id: env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb', model_id: 'eleven_flash_v2' },
+      tts: { voice_id: env.ELEVENLABS_CALL_VOICE_ID || env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb', model_id: env.ELEVENLABS_CALL_MODEL_ID || 'eleven_v4_turbo' },
       conversation: { max_duration_seconds: 600 },
     } },
     phone: { provider: 'sip_trunk', label: 'Photon skating coach', phone_number: number,

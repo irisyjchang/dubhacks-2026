@@ -15,11 +15,15 @@ export function createVoiceNotes({ env = process.env, fetchImpl = fetch, encode 
     let result = { type: 'text' }
     if (env.ELEVENLABS_API_KEY) {
       try {
-        const voice = env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'
-        const response = await fetchImpl(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`, {
+        const voice = env.ELEVENLABS_MEMO_VOICE_ID || env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'
+        const model = env.ELEVENLABS_MODEL_ID || 'eleven_v4'
+        const dialogue = model === 'eleven_v4' || model === 'eleven_v4_turbo'
+        const endpoint = dialogue ? 'text-to-dialogue' : `text-to-speech/${encodeURIComponent(voice)}`
+        const body = dialogue ? { inputs: [{ text, voice_id: voice }], model_id: model } : { text, model_id: model }
+        const response = await fetchImpl(`https://api.elevenlabs.io/v1/${endpoint}?output_format=mp3_44100_128`, {
           method: 'POST', signal: AbortSignal.timeout(30000),
           headers: { 'xi-api-key': env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-          body: JSON.stringify({ text, model_id: env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2' }),
+          body: JSON.stringify(body),
         })
         if (!response.ok) throw new Error('Speech request failed')
         const data = new Uint8Array(await response.arrayBuffer())

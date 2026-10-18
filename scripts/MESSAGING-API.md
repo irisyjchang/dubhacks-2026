@@ -12,16 +12,21 @@ the local port-8001 pipeline. The local web upload service remains available.
    DM or the coaching group. Current group membership, STOP, and mute rules
    are checked before processing and again before sending results.
 2. The agent acknowledges the upload, then calls `POST /agent/analyze` with
-   `video`, `program_type`, and `perceptron_track`. Each request can run for
-   up to 20 minutes. This API supports longer programs; the local pipeline's
+   `video`, `program_type`, and `perceptron_track`. If the API returns `202`, the agent saves the job ID and polls
+   `GET /agent/analysis/{id}` at the requested interval (normally 15 seconds),
+   for up to 20 minutes. This API supports longer programs; the local pipeline's
    former 30-second limit does not apply here.
 3. The response's `message` is sent unchanged as text. The analysis ID is
    stored per conversation, and the returned report is also saved to the
    existing coach memory for ordinary questions. Model scores and move labels
    remain predictions rather than official judging.
 4. Reply `3`, `move 3`, or `tell me about the third one`. The agent calls
-   `POST /agent/move` with that chat's analysis ID and `skeleton: true`, sends
-   its message unchanged, then attaches the normal and skeleton-overlay MP4s.
+   `POST /agent/move` with that chat's analysis ID and `view: "normal"`, sends
+   its message unchanged, then attaches the original move MP4. Reply
+   `skeleton` for the same move with a pose overlay and tracking box, or
+   `skeleton move 3` to choose a move directly. Reply `normal` or `original`
+   to switch back. The selected view comes from the response's `video_url`.
+   The agent offers the other view after sending each clip.
    A new video replaces only that chat's active analysis. If the API reports no
    numbered moves, the agent does not request move details.
 
@@ -32,9 +37,9 @@ guide: unknown program type and person tracking enabled.
 Analysis responses and per-video upload GUIDs are saved under ignored
 `.coach/messaging-agent/`. Delivery retries reuse saved text, attachments, and
 stable Photon message keys. The same event is not re-analysed after its result
-has been saved. A process restart or timeout before receiving the analysis
-response can repeat remote computation: the API has no documented job lookup
-or idempotency guarantee. Transient HTTP/network failures retry once. Bad move
+has been saved. Once a `202` job ID is saved, restarts resume polling without re-uploading
+the video. A restart or timeout before receiving any job ID can still repeat
+remote computation: the API has no documented idempotency guarantee. Transient HTTP/network failures retry once. Bad move
 numbers return a range hint; an expired analysis asks for a new upload.
 
 Videos are fetched only from the configured API origin, with redirects disabled
