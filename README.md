@@ -1,6 +1,6 @@
 # DubHacks 2026: figure-skating spin coach
 
-A local prototype that tracks the main skater, measures joint geometry, and produces an annotated video plus a written coaching report. The upload page lives on the frontend branch. This server exposes the job API.
+A local prototype that tracks the main skater, measures joint geometry, and produces an annotated video plus a written coaching report. A minimal upload page exercises the same pipeline without a production frontend.
 
 ## Setup
 
@@ -22,9 +22,9 @@ Videos, generated artifacts, virtual environments, API credentials and the downl
 .video-venv/bin/python webapp.py --ask-key
 ```
 
-Enter your NVIDIA API key at the hidden prompt, or run without `--ask-key` and configure `NVIDIA_API_KEY` in the server environment. Credentials are used in memory and passed to the worker environment, not saved in project files or returned in job results.
+Enter your NVIDIA API key at the hidden prompt, then open **http://127.0.0.1:8000**. Alternatively, run without `--ask-key` and enter a key in the form, or configure `NVIDIA_API_KEY` in the server environment. Credentials are used in memory and passed to the worker environment, not saved in project files or returned in job results.
 
-`GET http://127.0.0.1:8000/` describes the API. Upload a MOV, MP4, M4V, WebM or AVI clip up to 30 seconds / 200 MB with `POST /api/jobs`. Completed job URLs can be refreshed while the server is running.
+Upload a MOV, MP4, M4V, WebM or AVI clip up to 30 seconds / 200 MB. The page shows processing status, then the feedback video, full coaching report, and downloads. Completed job URLs can be refreshed while the server is running.
 
 - **NVIDIA mode:** local pose tracking and measurements, followed by model-generated coaching for each roughly one-second interval and timed video captions. Timestamped video crops and pose summaries are sent to NVIDIA.
 - **Local-only mode:** local tracking, a pose-overlay video, and a disclosed rule-based report; no model calls or model timeline captions.
